@@ -15,8 +15,9 @@ can run ``flask db migrate`` without first configuring a production secret.
 import os
 import sys
 
-# The repo lives at /home/<username>/Tavryc on PythonAnywhere.
-REPO_DIR = "/home/%s/Tavryc" % os.environ.get("USER", "")
+# The repo lives next to this file, so it works whether the checkout is at
+# /home/<username>/Tavryc or /home/<username>/xyz-os or anywhere else.
+REPO_DIR = os.path.dirname(os.path.abspath(__file__))
 if REPO_DIR not in sys.path:
     sys.path.insert(0, REPO_DIR)
 
