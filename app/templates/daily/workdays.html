@@ -4,208 +4,216 @@
 {% block title %}Workday calendar{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('daily.index') }}">Daily check-in</a>
- <span aria-hidden="true">/</span>
- <span>Workday calendar</span>
+<a href="{{ url_for('daily.index') }}">Daily check-in</a>
+<span aria-hidden="true">/</span>
+<span>Workday calendar</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>Workday calendar</h1>
- <p class="subtitle">
-      Which dates count as working days, and who has approved leave. These settings
-      drive streaks, focus credits and reporting compliance — an approved absence
-      never counts against anyone.
- </p>
- </div>
+     <div>
+          <h1>Workday calendar</h1>
+          <p class="subtitle">
+               Which dates count as working days, and who has approved leave. These settings
+               drive streaks, focus credits and reporting compliance — an approved absence
+               never counts against anyone.
+          </p>
+     </div>
 </div>
 
 <div class="stat-strip mb-6">
- <div class="stat">
- <span class="label">Range</span>
- <span class="value" style="font-size:var(--text-md);">{{ start|localdate("%d %b") }} – {{ end|localdate("%d %b") }}</span>
- <span class="meta">company time zone</span>
- </div>
- <div class="stat">
- <span class="label">Working days</span>
- <span class="value numeric">{{ working_day_count }}</span>
- <span class="meta">in this range</span>
- </div>
- <div class="stat">
- <span class="label">Working week</span>
- <span class="value" style="font-size:var(--text-md);">
-      {{ workweek|map("string")|join(", ") }}
- </span>
- <span class="meta">ISO weekday numbers, Mon = 1</span>
- </div>
- <div class="stat">
- <span class="label">Exceptions recorded</span>
- <span class="value numeric">{{ exceptions|length }}</span>
- <span class="meta">{{ holidays|length }} calendar overrides</span>
- </div>
+     <div class="stat">
+          <span class="label">Range</span>
+          <span class="value" style="font-size:var(--text-md);">{{ start|localdate("%d %b") }} – {{ end|localdate("%d
+               %b") }}</span>
+          <span class="meta">company time zone</span>
+     </div>
+     <div class="stat">
+          <span class="label">Working days</span>
+          <span class="value numeric">{{ working_day_count }}</span>
+          <span class="meta">in this range</span>
+     </div>
+     <div class="stat">
+          <span class="label">Working week</span>
+          <span class="value" style="font-size:var(--text-md);">
+               {{ workweek|map("string")|join(", ") }}
+          </span>
+          <span class="meta">ISO weekday numbers, Mon = 1</span>
+     </div>
+     <div class="stat">
+          <span class="label">Exceptions recorded</span>
+          <span class="value numeric">{{ exceptions|length }}</span>
+          <span class="meta">{{ holidays|length }} calendar overrides</span>
+     </div>
 </div>
 
 <div class="split">
- <div>
- <section class="panel">
- <div class="panel-head">
- <h2>Approved absences and holidays</h2>
- <span class="count">{{ exceptions|length }}</span>
- </div>
+     <div>
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Approved absences and holidays</h2>
+                    <span class="count">{{ exceptions|length }}</span>
+               </div>
 
-      {% if exceptions %}
- <div class="table-wrap" style="border:0;border-radius:0;">
- <table class="data">
- <thead>
- <tr>
- <th scope="col">Date</th>
- <th scope="col">Applies to</th>
- <th scope="col">Kind</th>
- <th scope="col">Reason</th>
- <th scope="col">Approved by</th>
- <th scope="col"><span class="visually-hidden">Action</span></th>
- </tr>
- </thead>
- <tbody>
-            {% for row in exceptions %}
- <tr>
- <td class="nowrap">{{ row.date|localdate("%a %d %b %Y") }}</td>
- <td class="nowrap">
-                {% if row.user %}
- <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
-                {% else %}
- <span class="tone-info">Whole company</span>
-                {% endif %}
- </td>
- <td class="nowrap">{{ row.kind|title }}</td>
- <td>{{ row.reason or "—" }}</td>
- <td class="nowrap small muted">
-                {{ row.approved_by.display_name if row.approved_by else "—" }}
- </td>
- <td class="nowrap">
- <form method="post" action="{{ url_for('daily.remove_absence', exception_id=row.id) }}"
-                      data-confirm="Remove this exception? The date returns to the normal working week.">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
- <button type="submit" class="btn btn-sm btn-ghost">Remove</button>
- </form>
- </td>
- </tr>
-            {% endfor %}
- </tbody>
- </table>
- </div>
-      {% else %}
-        {{ empty_state("No exceptions recorded", "Holidays and approved absences appear here. Without one, a working day is a working day.") }}
-      {% endif %}
+               {% if exceptions %}
+               <div class="table-wrap" style="border:0;border-radius:0;">
+                    <table class="data">
+                         <thead>
+                              <tr>
+                                   <th scope="col">Date</th>
+                                   <th scope="col">Applies to</th>
+                                   <th scope="col">Kind</th>
+                                   <th scope="col">Reason</th>
+                                   <th scope="col">Approved by</th>
+                                   <th scope="col"><span class="visually-hidden">Action</span></th>
+                              </tr>
+                         </thead>
+                         <tbody>
+                              {% for row in exceptions %}
+                              <tr>
+                                   <td class="nowrap">{{ row.date|localdate("%a %d %b %Y") }}</td>
+                                   <td class="nowrap">
+                                        {% if row.user %}
+                                        <a href="{{ url_for('team.profile', username=row.user.username) }}">{{
+                                             row.user.display_name }}</a>
+                                        {% else %}
+                                        <span class="tone-info">Whole company</span>
+                                        {% endif %}
+                                   </td>
+                                   <td class="nowrap">{{ row.kind|title }}</td>
+                                   <td>{{ row.reason or "—" }}</td>
+                                   <td class="nowrap small muted">
+                                        {{ row.approved_by.display_name if row.approved_by else "—" }}
+                                   </td>
+                                   <td class="nowrap">
+                                        <form method="post"
+                                             action="{{ url_for('daily.remove_absence', exception_id=row.id) }}"
+                                             data-confirm="Remove this exception? The date returns to the normal working week.">
+                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                             <button type="submit" class="btn btn-sm btn-ghost">Remove</button>
+                                        </form>
+                                   </td>
+                              </tr>
+                              {% endfor %}
+                         </tbody>
+                    </table>
+               </div>
+               {% else %}
+               {{ empty_state("No exceptions recorded", "Holidays and approved absences appear here. Without one, a
+               working day is a working day.") }}
+               {% endif %}
 
- <div class="panel-foot">
- <details>
- <summary class="small" style="cursor:pointer;">Record an absence or holiday</summary>
- <form method="post" action="{{ url_for('daily.add_absence') }}" class="mt-4">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
- <div class="grid-2">
- <div class="field">
- <label for="absence-user">Applies to</label>
- <select id="absence-user" name="user_id" required>
- <option value="">Choose a member</option>
-              {% for member in members %}
- <option value="{{ member.id }}">{{ member.display_name }}</option>
-              {% endfor %}
- </select>
- </div>
- <div class="field">
- <label for="absence-date">Date</label>
- <input id="absence-date" name="date" type="date" required>
- </div>
- <div class="field">
- <label for="absence-kind">Kind</label>
- <select id="absence-kind" name="kind">
- <option value="ABSENCE">Approved absence</option>
- <option value="HOLIDAY">Holiday</option>
- <option value="OTHER">Other</option>
- </select>
- </div>
- <div class="field">
- <label for="absence-reason">Reason</label>
- <input id="absence-reason" name="reason" type="text" maxlength="400"
-                     placeholder="Recorded for transparency">
- </div>
- </div>
- <button type="submit" class="btn btn-primary">Record exception</button>
- </form>
- </details>
- </div>
- </section>
- </div>
+               <div class="panel-foot">
+                    <details>
+                         <summary class="small" style="cursor:pointer;">Record an absence or holiday</summary>
+                         <form method="post" action="{{ url_for('daily.add_absence') }}" class="mt-4">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                              <div class="grid-2">
+                                   <div class="field">
+                                        <label for="absence-user">Applies to</label>
+                                        <select id="absence-user" name="user_id" required>
+                                             <option value="">Choose a member</option>
+                                             {% for member in members %}
+                                             <option value="{{ member.id }}">{{ member.display_name }}</option>
+                                             {% endfor %}
+                                        </select>
+                                   </div>
+                                   <div class="field">
+                                        <label for="absence-date">Date</label>
+                                        <input id="absence-date" name="date" type="date" required>
+                                   </div>
+                                   <div class="field">
+                                        <label for="absence-kind">Kind</label>
+                                        <select id="absence-kind" name="kind">
+                                             <option value="ABSENCE">Approved absence</option>
+                                             <option value="HOLIDAY">Holiday</option>
+                                             <option value="OTHER">Other</option>
+                                        </select>
+                                   </div>
+                                   <div class="field">
+                                        <label for="absence-reason">Reason</label>
+                                        <input id="absence-reason" name="reason" type="text" maxlength="400"
+                                             placeholder="Recorded for transparency">
+                                   </div>
+                              </div>
+                              <button type="submit" class="btn btn-primary">Record exception</button>
+                         </form>
+                    </details>
+               </div>
+          </section>
+     </div>
 
- <aside class="rail stack-4">
- <section class="panel">
- <div class="panel-head"><h2>Company calendar overrides</h2></div>
- <div class="panel-body">
- <p class="small muted">
-        Use this to mark a specific date as a working day or a non-working day,
-        overriding the normal week — a public holiday falling on a Tuesday, or a
-        one-off Saturday the company works.
-      </p>
- <form method="post" action="{{ url_for('daily.set_workday') }}">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
- <div class="field">
- <label for="workday-date">Date</label>
- <input id="workday-date" name="date" type="date" required>
- </div>
- <div class="field">
- <label for="workday-flag">Treat this date as</label>
- <select id="workday-flag" name="is_working_day">
- <option value="0">A non-working day</option>
- <option value="1">A working day</option>
- </select>
- </div>
- <div class="field">
- <label for="workday-note">Note</label>
- <input id="workday-note" name="note" type="text" maxlength="300"
-                   placeholder="Why this date differs">
- </div>
- <button type="submit" class="btn btn-primary btn-block">Save override</button>
- </form>
- </div>
- </section>
+     <aside class="rail stack-4">
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Company calendar overrides</h2>
+               </div>
+               <div class="panel-body">
+                    <p class="small muted">
+                         Use this to mark a specific date as a working day or a non-working day,
+                         overriding the normal week — a public holiday falling on a Tuesday, or a
+                         one-off Saturday the company works.
+                    </p>
+                    <form method="post" action="{{ url_for('daily.set_workday') }}">
+                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                         <div class="field">
+                              <label for="workday-date">Date</label>
+                              <input id="workday-date" name="date" type="date" required>
+                         </div>
+                         <div class="field">
+                              <label for="workday-flag">Treat this date as</label>
+                              <select id="workday-flag" name="is_working_day">
+                                   <option value="0">A non-working day</option>
+                                   <option value="1">A working day</option>
+                              </select>
+                         </div>
+                         <div class="field">
+                              <label for="workday-note">Note</label>
+                              <input id="workday-note" name="note" type="text" maxlength="300"
+                                   placeholder="Why this date differs">
+                         </div>
+                         <button type="submit" class="btn btn-primary btn-block">Save override</button>
+                    </form>
+               </div>
+          </section>
 
-    {% if holidays %}
- <section class="panel">
- <div class="panel-head">
- <h2>Overrides in range</h2>
- <span class="count">{{ holidays|length }}</span>
- </div>
- <ul class="list">
-        {% for row in holidays %}
- <li>
- <div class="list-row">
- <span class="grow">
- <span class="title">{{ row.date|localdate("%a %d %b %Y") }}</span>
- <span class="meta">
-              <span>{{ "Working day" if row.is_working_day else "Non-working day" }}</span>
-              {% if row.note %}<span>{{ row.note }}</span>{% endif %}
-            </span>
- </span>
- </div>
- </li>
-        {% endfor %}
- </ul>
- </section>
-    {% endif %}
+          {% if holidays %}
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Overrides in range</h2>
+                    <span class="count">{{ holidays|length }}</span>
+               </div>
+               <ul class="list">
+                    {% for row in holidays %}
+                    <li>
+                         <div class="list-row">
+                              <span class="grow">
+                                   <span class="title">{{ row.date|localdate("%a %d %b %Y") }}</span>
+                                   <span class="meta">
+                                        <span>{{ "Working day" if row.is_working_day else "Non-working day" }}</span>
+                                        {% if row.note %}<span>{{ row.note }}</span>{% endif %}
+                                   </span>
+                              </span>
+                         </div>
+                    </li>
+                    {% endfor %}
+               </ul>
+          </section>
+          {% endif %}
 
- <section class="panel">
- <div class="panel-head"><h2>How this is used</h2></div>
- <div class="panel-body">
- <ul class="small muted" style="padding-left:18px;margin:0;">
- <li>Streaks count working days only.</li>
- <li>An approved absence pauses a streak rather than breaking it.</li>
- <li>Reporting compliance is measured against working days, not calendar days.</li>
- <li>No XP is lost for an approved absence or a company holiday.</li>
- </ul>
- </div>
- </section>
- </aside>
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>How this is used</h2>
+               </div>
+               <div class="panel-body">
+                    <ul class="small muted" style="padding-left:18px;margin:0;">
+                         <li>Streaks count working days only.</li>
+                         <li>An approved absence pauses a streak rather than breaking it.</li>
+                         <li>Reporting compliance is measured against working days, not calendar days.</li>
+                         <li>No XP is lost for an approved absence or a company holiday.</li>
+                    </ul>
+               </div>
+          </section>
+     </aside>
 </div>
 {% endblock %}

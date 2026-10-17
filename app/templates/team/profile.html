@@ -149,19 +149,29 @@
  </div>
  </div>
 
-        {% if is_ceo and not is_self %}
- <div class="field">
- <label for="title">Official title</label>
- <input id="title" name="title" type="text" maxlength="160" value="{{ member.title or '' }}"
-                  placeholder="Caretaker CEO and Technical Lead">
- <p class="field-hint">
-              Only the CEO can change the official title. It is a company record, not
-              a self-description, and it grants no permissions on its own.
- </p>
- </div>
+{% if is_ceo and not is_self %}
+            <div class="field">
+                <label for="title">Official title</label>
+                <input id="title" name="title" type="text" maxlength="160" value="{{ member.title or '' }}"
+                       placeholder="Caretaker CEO and Technical Lead">
+                <p class="field-hint">
+                    Only the CEO can change the official title. It is a company record, not
+                    a self-description, and it grants no permissions on its own.
+                </p>
+            </div>
+
+            <div class="field">
+                <label for="functions">Functions in the company</label>
+                <textarea id="functions" name="functions" rows="3" maxlength="2000"
+                          placeholder="What this member does inside the company. Free text, not an enum.">{{ member.functions or '' }}</textarea>
+                <p class="field-hint">
+                    Shown on the profile and on the Founders page. Free text because the
+                    brief's responsibilities differ per founder.
+                </p>
+            </div>
         {% endif %}
 
- <button type="submit" class="btn btn-primary">Save profile</button>
+        <button type="submit" class="btn btn-primary">Save profile</button>
  </form>
  </div>
     {% endif %}

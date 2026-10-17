@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Raise an inquiry{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('inquiries.index') }}">Inquiries</a>
+<span aria-hidden="true">/</span>
+<span>Raise an inquiry</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Raise an inquiry</h1>
+        <p class="subtitle">
+            A question from the CEO to a founder about compliance, delivery or
+            conduct. Every member can read the board; only the founder it is
+            addressed to can reply.
+        </p>
+    </div>
+</div>
+
+<form method="post" action="{{ url_for('inquiries.new') }}" class="stack-4" style="max-width:760px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="field">
+        <label for="subject">Subject</label>
+        <input id="subject" name="subject" type="text" maxlength="200" required
+               placeholder="One line, so the founder knows what they are being asked.">
+    </div>
+
+    <div class="field">
+        <label for="body">The inquiry</label>
+        <textarea id="body" name="body" rows="6" maxlength="4000" required
+                  placeholder="Be specific. State the facts, the date, and what you need a written answer for."></textarea>
+    </div>
+
+    <div class="field">
+        <label for="addressed_to">Addressed to</label>
+        <select id="addressed_to" name="addressed_to">
+            <option value="">Company-wide — every founder may reply</option>
+            {% for member in members %}
+            <option value="{{ member.id }}">{{ member.display_name }} · {{ member.official_title }}</option>
+            {% endfor %}
+        </select>
+        <p class="field-hint">Company-wide inquiries can be replied to by any founder. Addressing one to a single
+            founder focuses the answer on them.</p>
+    </div>
+
+    <div class="row row-tight">
+        <button type="submit" class="btn btn-primary">Raise inquiry</button>
+        <a class="btn btn-ghost" href="{{ url_for('inquiries.index') }}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

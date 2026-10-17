@@ -6,175 +6,183 @@
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>Reports</h1>
- <p class="subtitle">
-      {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
-      Task delivery, review outcomes, focus sessions and reporting compliance are
-      reported separately. They are never merged into a single performance figure,
-      because they measure different things.
- </p>
- </div>
- <div class="page-actions">
- <form method="get" action="{{ url_for('ceo.reports') }}" class="row row-tight">
- <label class="visually-hidden" for="period">Period</label>
- <select id="period" name="period" style="width:auto;">
- <option value="week" {% if period == 'week' %}selected{% endif %}>Last 7 days</option>
- <option value="month" {% if period == 'month' %}selected{% endif %}>Last 30 days</option>
- <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Last 90 days</option>
- </select>
- <button type="submit" class="btn">Apply</button>
- </form>
- <a class="btn btn-ghost" href="{{ url_for('ceo.activity') }}">Activity log</a>
- </div>
+     <div>
+          <h1>Reports</h1>
+          <p class="subtitle">
+               {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
+               Task delivery, review outcomes, focus sessions and reporting compliance are
+               reported separately. They are never merged into a single performance figure,
+               because they measure different things.
+          </p>
+     </div>
+     <div class="page-actions">
+          <form method="get" action="{{ url_for('ceo.reports') }}" class="row row-tight">
+               <label class="visually-hidden" for="period">Period</label>
+               <select id="period" name="period" style="width:auto;">
+                    <option value="week" {% if period=='week' %}selected{% endif %}>Last 7 days</option>
+                    <option value="month" {% if period=='month' %}selected{% endif %}>Last 30 days</option>
+                    <option value="quarter" {% if period=='quarter' %}selected{% endif %}>Last 90 days</option>
+               </select>
+               <button type="submit" class="btn">Apply</button>
+          </form>
+          <a class="btn btn-ghost" href="{{ url_for('ceo.activity') }}">Activity log</a>
+     </div>
 </div>
 
 <section>
- <h2>Delivery</h2>
- <div class="stat-strip">
- <div class="stat">
- <span class="label">Created</span>
- <span class="value numeric">{{ task_metrics.created }}</span>
- <span class="meta">tasks raised in this period</span>
- </div>
- <div class="stat">
- <span class="label">Completed</span>
- <span class="value numeric positive">{{ task_metrics.completed }}</span>
- <span class="meta">{{ task_metrics.completion_rate }}% of those created</span>
- </div>
- <div class="stat">
- <span class="label">Open</span>
- <span class="value numeric">{{ task_metrics.open }}</span>
- <span class="meta">still in flight</span>
- </div>
- <div class="stat">
- <span class="label">Overdue</span>
- <span class="value numeric {% if task_metrics.overdue %}critical{% endif %}">{{ task_metrics.overdue }}</span>
- <span class="meta">past deadline</span>
- </div>
- <div class="stat">
- <span class="label">Blocked</span>
- <span class="value numeric {% if task_metrics.blocked %}critical{% endif %}">{{ task_metrics.blocked }}</span>
- <span class="meta">waiting on something</span>
- </div>
- </div>
+     <h2>Delivery</h2>
+     <div class="stat-strip">
+          <div class="stat">
+               <span class="label">Created</span>
+               <span class="value numeric">{{ task_metrics.created }}</span>
+               <span class="meta">tasks raised in this period</span>
+          </div>
+          <div class="stat">
+               <span class="label">Completed</span>
+               <span class="value numeric positive">{{ task_metrics.completed }}</span>
+               <span class="meta">{{ task_metrics.completion_rate }}% of those created</span>
+          </div>
+          <div class="stat">
+               <span class="label">Open</span>
+               <span class="value numeric">{{ task_metrics.open }}</span>
+               <span class="meta">still in flight</span>
+          </div>
+          <div class="stat">
+               <span class="label">Overdue</span>
+               <span class="value numeric {% if task_metrics.overdue %}critical{% endif %}">{{ task_metrics.overdue
+                    }}</span>
+               <span class="meta">past deadline</span>
+          </div>
+          <div class="stat">
+               <span class="label">Blocked</span>
+               <span class="value numeric {% if task_metrics.blocked %}critical{% endif %}">{{ task_metrics.blocked
+                    }}</span>
+               <span class="meta">waiting on something</span>
+          </div>
+     </div>
 </section>
 
 <section class="mt-6">
- <h2>Review outcomes</h2>
- <div class="stat-strip">
- <div class="stat">
- <span class="label">Approved</span>
- <span class="value numeric positive">{{ review_metrics.approved }}</span>
- <span class="meta">submissions accepted</span>
- </div>
- <div class="stat">
- <span class="label">Changes requested</span>
- <span class="value numeric {% if review_metrics.changes_requested %}attention{% endif %}">{{ review_metrics.changes_requested }}</span>
- <span class="meta">returned with feedback</span>
- </div>
- <div class="stat">
- <span class="label">First-pass rate</span>
- <span class="value numeric">{{ review_metrics.first_pass_rate }}%</span>
- <span class="meta">accepted without rework</span>
- </div>
- <div class="stat">
- <span class="label">On time</span>
- <span class="value numeric">{{ review_metrics.on_time }}</span>
- <span class="meta">accepted within deadline</span>
- </div>
- <div class="stat">
- <span class="label">Awaiting review</span>
- <span class="value numeric {% if review_metrics.awaiting_review %}attention{% endif %}">{{ review_metrics.awaiting_review }}</span>
- <span class="meta">right now</span>
- </div>
- </div>
+     <h2>Review outcomes</h2>
+     <div class="stat-strip">
+          <div class="stat">
+               <span class="label">Approved</span>
+               <span class="value numeric positive">{{ review_metrics.approved }}</span>
+               <span class="meta">submissions accepted</span>
+          </div>
+          <div class="stat">
+               <span class="label">Changes requested</span>
+               <span class="value numeric {% if review_metrics.changes_requested %}attention{% endif %}">{{
+                    review_metrics.changes_requested }}</span>
+               <span class="meta">returned with feedback</span>
+          </div>
+          <div class="stat">
+               <span class="label">First-pass rate</span>
+               <span class="value numeric">{{ review_metrics.first_pass_rate }}%</span>
+               <span class="meta">accepted without rework</span>
+          </div>
+          <div class="stat">
+               <span class="label">On time</span>
+               <span class="value numeric">{{ review_metrics.on_time }}</span>
+               <span class="meta">accepted within deadline</span>
+          </div>
+          <div class="stat">
+               <span class="label">Awaiting review</span>
+               <span class="value numeric {% if review_metrics.awaiting_review %}attention{% endif %}">{{
+                    review_metrics.awaiting_review }}</span>
+               <span class="meta">right now</span>
+          </div>
+     </div>
 </section>
 
 <section class="mt-6">
- <h2>Focus and daily records</h2>
- <div class="stat-strip">
- <div class="stat">
- <span class="label">Focus sessions</span>
- <span class="value numeric">{{ focus_metrics.completed_sessions }}</span>
- <span class="meta">{{ focus_metrics.total_minutes }} minutes recorded</span>
- </div>
- <div class="stat">
- <span class="label">Credited days</span>
- <span class="value numeric">{{ focus_metrics.credited_days }}</span>
- <span class="meta">one credit per working day</span>
- </div>
- <div class="stat">
- <span class="label">Interrupted</span>
- <span class="value numeric">{{ focus_metrics.interrupted }}</span>
- <span class="meta">{{ focus_metrics.abandoned }} abandoned</span>
- </div>
- <div class="stat">
- <span class="label">Check-ins</span>
- <span class="value numeric">{{ reporting_metrics.checkins }}</span>
- <span class="meta">submitted</span>
- </div>
- <div class="stat">
- <span class="label">Reports</span>
- <span class="value numeric">{{ reporting_metrics.reports }}</span>
- <span class="meta">submitted</span>
- </div>
- </div>
+     <h2>Focus and daily records</h2>
+     <div class="stat-strip">
+          <div class="stat">
+               <span class="label">Focus sessions</span>
+               <span class="value numeric">{{ focus_metrics.completed_sessions }}</span>
+               <span class="meta">{{ focus_metrics.total_minutes }} minutes recorded</span>
+          </div>
+          <div class="stat">
+               <span class="label">Credited days</span>
+               <span class="value numeric">{{ focus_metrics.credited_days }}</span>
+               <span class="meta">one credit per working day</span>
+          </div>
+          <div class="stat">
+               <span class="label">Interrupted</span>
+               <span class="value numeric">{{ focus_metrics.interrupted }}</span>
+               <span class="meta">{{ focus_metrics.abandoned }} abandoned</span>
+          </div>
+          <div class="stat">
+               <span class="label">Check-ins</span>
+               <span class="value numeric">{{ reporting_metrics.checkins }}</span>
+               <span class="meta">submitted</span>
+          </div>
+          <div class="stat">
+               <span class="label">Reports</span>
+               <span class="value numeric">{{ reporting_metrics.reports }}</span>
+               <span class="meta">submitted</span>
+          </div>
+     </div>
 </section>
 
 <section class="panel mt-6">
- <div class="panel-head">
- <h2>Per member</h2>
- <span class="count">{{ compliance|length }}</span>
- </div>
- <div class="table-wrap" style="border:0;border-radius:0;">
- <table class="data">
- <caption>
-        Working days are counted from each member's own calendar, so approved leave
-        reduces the denominator rather than the rate.
-      </caption>
- <thead>
- <tr>
- <th scope="col">Member</th>
- <th scope="col" class="num">Working days</th>
- <th scope="col" class="num">Completed</th>
- <th scope="col" class="num">Open</th>
- <th scope="col" class="num">Overdue</th>
- <th scope="col" class="num">Approved</th>
- <th scope="col" class="num">Changes</th>
- <th scope="col" class="num">Focus days</th>
- <th scope="col" class="num">Check-in rate</th>
- <th scope="col" class="num">Report rate</th>
- </tr>
- </thead>
- <tbody>
-        {% for row in compliance %}
- <tr>
- <td class="nowrap">
- <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
- </td>
- <td class="num">{{ row.working_days }}</td>
- <td class="num">{{ row.tasks_completed }}</td>
- <td class="num">{{ row.open_tasks }}</td>
- <td class="num {% if row._overdue %}tone-critical{% endif %}">{{ row._overdue }}</td>
- <td class="num">{{ row.approved }}</td>
- <td class="num {% if row.changes_requested %}tone-attention{% endif %}">{{ row.changes_requested }}</td>
- <td class="num">{{ row.focus_days }}</td>
- <td class="num {% if row.checkin_rate < 60 %}tone-attention{% endif %}">{{ row.checkin_rate }}%</td>
- <td class="num {% if row.report_rate < 60 %}tone-attention{% endif %}">{{ row.report_rate }}%</td>
- </tr>
-        {% endfor %}
- </tbody>
- </table>
- </div>
+     <div class="panel-head">
+          <h2>Per member</h2>
+          <span class="count">{{ compliance|length }}</span>
+     </div>
+     <div class="table-wrap" style="border:0;border-radius:0;">
+          <table class="data">
+               <caption>
+                    Working days are counted from each member's own calendar, so approved leave
+                    reduces the denominator rather than the rate.
+               </caption>
+               <thead>
+                    <tr>
+                         <th scope="col">Member</th>
+                         <th scope="col" class="num">Working days</th>
+                         <th scope="col" class="num">Completed</th>
+                         <th scope="col" class="num">Open</th>
+                         <th scope="col" class="num">Overdue</th>
+                         <th scope="col" class="num">Approved</th>
+                         <th scope="col" class="num">Changes</th>
+                         <th scope="col" class="num">Focus days</th>
+                         <th scope="col" class="num">Check-in rate</th>
+                         <th scope="col" class="num">Report rate</th>
+                    </tr>
+               </thead>
+               <tbody>
+                    {% for row in compliance %}
+                    <tr>
+                         <td class="nowrap">
+                              <a href="{{ url_for('team.profile', username=row.user.username) }}">{{
+                                   row.user.display_name }}</a>
+                         </td>
+                         <td class="num">{{ row.working_days }}</td>
+                         <td class="num">{{ row.tasks_completed }}</td>
+                         <td class="num">{{ row.open_tasks }}</td>
+                         <td class="num {% if row._overdue %}tone-critical{% endif %}">{{ row._overdue }}</td>
+                         <td class="num">{{ row.approved }}</td>
+                         <td class="num {% if row.changes_requested %}tone-attention{% endif %}">{{
+                              row.changes_requested }}</td>
+                         <td class="num">{{ row.focus_days }}</td>
+                         <td class="num {% if row.checkin_rate < 60 %}tone-attention{% endif %}">{{ row.checkin_rate }}%
+                         </td>
+                         <td class="num {% if row.report_rate < 60 %}tone-attention{% endif %}">{{ row.report_rate }}%
+                         </td>
+                    </tr>
+                    {% endfor %}
+               </tbody>
+          </table>
+     </div>
 </section>
 
 <div class="notice mt-6">
- <p class="field-label mb-2">Reading these figures</p>
- <p class="small muted mb-0">
-      A low completion count may mean a hard brief, a long review cycle or time spent
-      on work that produces no task. These numbers are a starting point for a
-      conversation, not a verdict on anyone.
- </p>
+     <p class="field-label mb-2">Reading these figures</p>
+     <p class="small muted mb-0">
+          A low completion count may mean a hard brief, a long review cycle or time spent
+          on work that produces no task. These numbers are a starting point for a
+          conversation, not a verdict on anyone.
+     </p>
 </div>
 {% endblock %}

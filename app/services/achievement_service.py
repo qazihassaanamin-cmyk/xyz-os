@@ -208,6 +208,119 @@ CATALOGUE: list[dict] = [
         "icon": "level",
         "sort_order": 170,
     },
+    # --- The ten recognition achievements from the brief ------------------
+    # Each is earned from a verified event and can be held once. Names, not
+    # codes, are what members see, so they are written plainly.
+    {
+        "code": "first_delivery",
+        "name": "First Delivery",
+        "description": "Your first piece of work was accepted.",
+        "rule_type": "COUNTER",
+        "rule_field": "tasks_completed",
+        "rule_threshold": 1,
+        "points": 0,
+        "icon": "task",
+        "sort_order": 200,
+    },
+    {
+        "code": "consistent_contributor",
+        "name": "Consistent Contributor",
+        "description": "A completed focus day in ten different working days.",
+        "rule_type": "COUNTER",
+        "rule_field": "focus_streak_days",
+        "rule_threshold": 10,
+        "points": 0,
+        "icon": "streak",
+        "sort_order": 210,
+    },
+    {
+        "code": "quality_first",
+        "name": "Quality First",
+        "description": "Three deliveries accepted on the first submission.",
+        "rule_type": "COUNTER",
+        "rule_field": "first_pass_deliveries",
+        "rule_threshold": 3,
+        "points": 0,
+        "icon": "check",
+        "sort_order": 220,
+    },
+    {
+        "code": "deadline_keeper",
+        "name": "Deadline Keeper",
+        "description": "Five accepted deliveries on or before their deadline.",
+        "rule_type": "COUNTER",
+        "rule_field": "tasks_on_time",
+        "rule_threshold": 5,
+        "points": 0,
+        "icon": "clock",
+        "sort_order": 230,
+    },
+    {
+        "code": "problem_solver",
+        "name": "Problem Solver",
+        "description": "Resolved five blockers that were stopping other people's work.",
+        "rule_type": "COUNTER",
+        "rule_field": "blockers_resolved",
+        "rule_threshold": 5,
+        "points": 0,
+        "icon": "blocker",
+        "sort_order": 240,
+    },
+    {
+        "code": "team_player",
+        "name": "Team Player",
+        "description": "Reviewed ten submissions from colleagues.",
+        "rule_type": "COUNTER",
+        "rule_field": "reviews_given",
+        "rule_threshold": 10,
+        "points": 0,
+        "icon": "review",
+        "sort_order": 250,
+    },
+    {
+        "code": "knowledge_sharer",
+        "name": "Knowledge Sharer",
+        "description": "Published three knowledge entries for the team.",
+        "rule_type": "COUNTER",
+        "rule_field": "knowledge_entries",
+        "rule_threshold": 3,
+        "points": 0,
+        "icon": "knowledge",
+        "sort_order": 260,
+    },
+    {
+        "code": "milestone_maker",
+        "name": "Milestone Maker",
+        "description": "Completed three project milestones.",
+        "rule_type": "COUNTER",
+        "rule_field": "milestones_completed",
+        "rule_threshold": 3,
+        "points": 0,
+        "icon": "milestone",
+        "sort_order": 270,
+    },
+    {
+        "code": "reliability_award",
+        "name": "Reliability Award",
+        "description": "A check-in and a report on ten working days.",
+        "rule_type": "COUNTER",
+        "rule_field": "report_days",
+        "rule_threshold": 10,
+        "points": 0,
+        "icon": "checkin",
+        "sort_order": 280,
+    },
+    {
+        "code": "project_finisher",
+        "name": "Project Finisher",
+        "description": "Was a member of a project taken through to completion.",
+        "rule_type": "COUNTER",
+        "rule_field": "projects_completed",
+        "rule_threshold": 1,
+        "points": 0,
+        "icon": "project",
+        "sort_order": 290,
+    },
 ]
 
 
@@ -235,13 +348,13 @@ def ensure_catalogue() -> None:
             )
             changed = True
         else:
-            # Keep description text current without touching an award already made.
-            if row.description != spec["description"]:
-                row.description = spec["description"]
-                changed = True
-            if row.rule_threshold != spec.get("rule_threshold"):
-                row.rule_threshold = spec.get("rule_threshold")
-                changed = True
+            # Keep the catalogue definition current without touching an award
+            # already made: awards store a name snapshot precisely so a later
+            # edit here cannot rewrite someone's history.
+            for field in ("name", "description", "rule_type", "rule_field", "rule_threshold", "points", "icon", "sort_order"):
+                if field in spec and getattr(row, field) != spec[field]:
+                    setattr(row, field, spec[field])
+                    changed = True
     if changed:
         try:
             db.session.commit()
@@ -250,31 +363,84 @@ def ensure_catalogue() -> None:
 
 
 def _counters_for(user: User) -> dict[str, int]:
-    """Live counters. Computed from stored records, never from client input."""
-    from app.models.daily import DailyCheckin
+    """Live counters, computed from stored records only.
+
+    Nothing here is incremented by a view or by a client request: every value is
+    derived from rows that a verified event already created.
+    """
+    from app.models.content import KnowledgeEntry, KnowledgeStatus
+    from app.models.daily import DailyCheckin, DailyReport
+    from app.models.focus import FocusSession, FocusStatus
+    from app.models.project import Project, ProjectMember, ProjectStatus
+    from app.models.task import Blocker, BlockerStatus, Review, ReviewDecision, Submission, SubmissionStatus
     from app.services.xp_service import ensure_profile
 
     profile = ensure_profile(user)
+
     checkins_total = DailyCheckin.query.filter_by(user_id=user.id).count()
+    report_days = DailyReport.query.filter_by(user_id=user.id).count()
 
-    # Review count is derived from the ledger rather than a separate table to
-    # keep one source of truth for "reviewer" credit.
-    from app.models.xp import XpReason, XpTransaction
+    # A day with both a check-in and a report is the reliability unit.
+    checkin_days = {
+        row.workday_date for row in DailyCheckin.query.filter_by(user_id=user.id).all()
+    }
+    report_days_set = {
+        row.workday_date for row in DailyReport.query.filter_by(user_id=user.id).all()
+    }
+    paired_days = len(checkin_days & report_days_set)
 
-    review_xp_count = (
-        XpTransaction.query.filter_by(
-            user_id=user.id, reason=XpReason.REVIEW_QUALITY_BONUS.value
+    focus_days = {
+        row.workday_date
+        for row in FocusSession.query.filter_by(
+            user_id=user.id, status=FocusStatus.COMPLETED.value
+        ).all()
+    }
+
+    first_pass = Submission.query.filter(
+        Submission.submitted_by_id == user.id,
+        Submission.status == SubmissionStatus.APPROVED.value,
+        Submission.revision_number == 1,
+    ).count()
+
+    tasks_on_time = Review.query.filter(
+        Review.was_on_time.is_(True),
+        Review.decision == ReviewDecision.APPROVED.value,
+        Review.submission.has(Submission.submitted_by_id == user.id),
+    ).count()
+
+    reviews_given = Review.query.filter(Review.reviewer_id == user.id).count()
+    blockers_resolved = Blocker.query.filter(
+        Blocker.status == BlockerStatus.RESOLVED.value,
+        Blocker.helper_id == user.id,
+    ).count()
+    knowledge_entries = KnowledgeEntry.query.filter(
+        KnowledgeEntry.author_id == user.id,
+        KnowledgeEntry.status == KnowledgeStatus.PUBLISHED.value,
+    ).count()
+
+    project_ids = [row.project_id for row in ProjectMember.query.filter_by(user_id=user.id).all()]
+    projects_completed = (
+        Project.query.filter(
+            Project.id.in_(project_ids),
+            Project.status == ProjectStatus.COMPLETED.value,
         ).count()
+        if project_ids
+        else 0
     )
 
     return {
         "tasks_completed": profile.tasks_completed or 0,
-        "tasks_on_time": profile.tasks_on_time or 0,
-        "reviews_approved": max(profile.reviews_approved or 0, review_xp_count),
-        "blockers_resolved": profile.blockers_resolved or 0,
+        "tasks_on_time": tasks_on_time,
+        "reviews_given": reviews_given,
+        "reviews_approved": reviews_given,
+        "blockers_resolved": blockers_resolved,
         "milestones_completed": profile.milestones_completed or 0,
         "focus_sessions_completed": profile.focus_sessions_completed or 0,
-        "knowledge_entries": profile.knowledge_entries or 0,
+        "focus_streak_days": len(focus_days),
+        "knowledge_entries": knowledge_entries,
+        "first_pass_deliveries": first_pass,
+        "report_days": paired_days if paired_days else report_days,
+        "projects_completed": projects_completed,
         "focus_streak": profile.focus_streak or 0,
         "report_streak": profile.report_streak or 0,
         "current_level": profile.current_level or 1,

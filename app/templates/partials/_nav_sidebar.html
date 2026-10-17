@@ -70,6 +70,13 @@
         </svg>
         Ideas &amp; suggestions
       </a>
+      <a href="{{ url_for('inquiries.index') }}" {% if nav and nav.startswith('inquiries.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 3.5h10v4H8l-3 2.5V7.5H3z" stroke-linejoin="round"/>
+          <path d="M11 9.5h2v4h-2z" stroke-linecap="round"/>
+        </svg>
+        Inquiries
+      </a>
       <a href="{{ url_for('lounge.index') }}" {% if nav and nav.startswith('lounge.') %}aria-current="page"{% endif %}>
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
           <path d="M2.5 4.5h11v6h-6l-3 3v-3h-2z" stroke-linejoin="round"/>
@@ -114,6 +121,13 @@
           <path d="M11 6.5a2 2 0 100-4M14 12.5c0-1.5-1-2.4-2.5-2.6" stroke-linecap="round"/>
         </svg>
         Team members
+      </a>
+      <a href="{{ url_for('ceo.founders') }}" {% if nav == 'ceo.founders' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <circle cx="5" cy="5" r="2"/><circle cx="11" cy="5" r="2"/>
+          <path d="M2 13c0-2 1.8-3 4-3M10 13c0-2 1.8-3 4-3" stroke-linecap="round"/>
+        </svg>
+        Founders
       </a>
       <a href="{{ url_for('tasks.review_queue') }}">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">

@@ -163,6 +163,47 @@ DEFAULT_RULES: list[dict] = [
         "daily_cap": 120,
         "cooldown_seconds": None,
     },
+    # The manual reasons are seeded with zero points: they only ever carry an
+    # explicit amount, and the reason must be written in words. They are seeded
+    # so the rules table is complete and the CEO can see them in the panel.
+    {
+        "code": XpReason.MANUAL_AWARD.value,
+        "label": "Manual award",
+        "points": 0,
+        "description": (
+            "A discretionary award by the CEO. Requires an explicit amount and a "
+            "written reason of at least 10 characters. Weekly total is capped."
+        ),
+        "daily_cap": None,
+        "cooldown_seconds": None,
+    },
+    {
+        "code": XpReason.MANUAL_DEDUCTION.value,
+        "label": "Manual deduction",
+        "points": 0,
+        "description": "A discretionary deduction by the CEO, always with a written reason.",
+        "daily_cap": None,
+        "cooldown_seconds": None,
+    },
+    {
+        "code": XpReason.REVERSAL.value,
+        "label": "Reversal of an earlier award",
+        "points": 0,
+        "description": (
+            "A compensating negative entry against an earlier award. The original "
+            "row is never edited or deleted."
+        ),
+        "daily_cap": None,
+        "cooldown_seconds": None,
+    },
+    {
+        "code": XpReason.ADMIN_ADJUSTMENT.value,
+        "label": "Administrative adjustment",
+        "points": 0,
+        "description": "A correction applied during maintenance. Always logged with a reason.",
+        "daily_cap": None,
+        "cooldown_seconds": None,
+    },
 ]
 
 # Difficulty scales the base award. These are percentages of the rule value.
@@ -173,6 +214,24 @@ DIFFICULTY_MULTIPLIERS: dict[str, int] = {
     "CRITICAL": 350,
 }
 
+# The shipped XP economy, stated once so the UI and the tests share it.
+# Task awards are these numbers scaled by the difficulty multiplier above.
+DIRECT_AWARD_VALUES: dict[str, int] = {
+    "small_task": 40,
+    "medium_task": 100,
+    "large_task": 200,
+    "critical_task": 350,
+    "review_quality_bonus_max": 10,
+    "on_time_bonus_percent": 10,
+    "focus_completion": 10,
+    "checkin_and_report": 10,
+    "blocker_resolved": 20,
+    "milestone_completed": 50,
+    "suggestion_implemented": 40,
+    "knowledge_document_approved": 15,
+    "ceo_bonus_max": 100,
+}
+
 # Reasons that must never be granted by the automatic engine.
 MANUAL_ONLY_REASONS = {
     XpReason.MANUAL_AWARD.value,
@@ -181,8 +240,29 @@ MANUAL_ONLY_REASONS = {
     XpReason.ADMIN_ADJUSTMENT.value,
 }
 
+# Weekly ceiling per source. Generous for ordinary weeks, strict enough that
+# grinding one kind of event cannot inflate the ledger. "Discretionary" CEO
+# awards are capped here too, as the brief requires.
+WEEKLY_CAPS: dict[str, int] = {
+    XpReason.TASK_COMPLETED.value: 1200,
+    XpReason.REVIEW_QUALITY_BONUS.value: 200,
+    XpReason.ON_TIME_BONUS.value: 200,
+    XpReason.MILESTONE_COMPLETED.value: 400,
+    XpReason.BLOCKER_RESOLVED.value: 300,
+    XpReason.BLOCKER_HELPED.value: 200,
+    XpReason.FOCUS_SESSION.value: 100,
+    XpReason.CHECKIN_COMPLETED.value: 60,
+    XpReason.REPORT_COMPLETED.value: 75,
+    XpReason.SUGGESTION_IMPLEMENTED.value: 200,
+    XpReason.KNOWLEDGE_DOCUMENTED.value: 150,
+    XpReason.WEEKLY_CHALLENGE.value: 180,
+    XpReason.STREAK_BONUS.value: 100,
+    XpReason.MANUAL_AWARD.value: 500,
+    XpReason.MANUAL_DEDUCTION.value: 500,
+}
+
 # Reasons for which more than one award per day is allowed but still capped.
-REPEATABLE_REASONS = {
+REPEATABLE_REASONS: set[str] = {
     XpReason.TASK_COMPLETED.value,
     XpReason.REVIEW_QUALITY_BONUS.value,
     XpReason.ON_TIME_BONUS.value,
@@ -274,6 +354,30 @@ def _awarded_today(user_id: int, reason: str) -> int:
     return int(total or 0)
 
 
+def _awarded_this_week(user_id: int, reason: str) -> int:
+    """Total XP granted this week for a reason, counted from Monday.
+
+    The window is the company's working week, so the figure means the same thing
+    to every member regardless of their local calendar.
+    """
+    from app.services.workday_service import week_bounds
+    from app.utils.dates import company_today, day_bounds_utc
+
+    week_start, _ = week_bounds(company_today())
+    start_utc, _ = day_bounds_utc(week_start)
+    total = (
+        db.session.query(func.coalesce(func.sum(XpTransaction.amount), 0))
+        .filter(
+            XpTransaction.user_id == user_id,
+            XpTransaction.reason == reason,
+            XpTransaction.amount > 0,
+            XpTransaction.created_at >= start_utc,
+        )
+        .scalar()
+    )
+    return int(total or 0)
+
+
 def _last_award_at(user_id: int, reason: str) -> datetime | None:
     row = (
         XpTransaction.query.filter_by(user_id=user_id, reason=reason)
@@ -324,6 +428,13 @@ def award_xp(
         raise XpError(f"{reason} is a manual reason and cannot be granted automatically.")
     if allow_manual and not (note or "").strip():
         raise XpError("Manual awards and deductions require a reason.")
+    # No one may reward themselves, and a manual award must always name its actor
+    # so the ledger can answer "who gave this?" without inference.
+    if allow_manual:
+        if awarded_by is not None and getattr(awarded_by, "id", None) == user.id:
+            raise XpError("You cannot award or deduct XP on your own account.")
+        if getattr(awarded_by, "role", None) != "CEO":
+            raise XpError("Only the CEO can make manual XP adjustments.")
 
     if _already_awarded(idempotency_key):
         log.info("Duplicate XP award blocked for key %s", idempotency_key)
@@ -348,6 +459,18 @@ def award_xp(
                 return None
             if already + base_points > rule.daily_cap:
                 base_points = max(0, rule.daily_cap - already)
+                if base_points == 0:
+                    return None
+        # Weekly ceilings apply to every automatic source, so a burst of
+        # approvals on one day cannot roll into an outsized week.
+        weekly_cap = WEEKLY_CAPS.get(reason)
+        if weekly_cap is not None:
+            already_week = _awarded_this_week(user.id, reason)
+            if already_week >= weekly_cap:
+                log.info("Weekly cap reached for %s on rule %s", user.id, reason)
+                return None
+            if already_week + base_points > weekly_cap:
+                base_points = max(0, weekly_cap - already_week)
                 if base_points == 0:
                     return None
         if rule.cooldown_seconds:

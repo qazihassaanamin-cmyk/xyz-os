@@ -7,81 +7,84 @@
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>Team members</h1>
- <p class="subtitle">
-      Everyone at {{ company_name }}, with their official role and current load.
-      Opening a profile shows their verified contribution record.
- </p>
- </div>
+     <div>
+          <h1>Team members</h1>
+          <p class="subtitle">
+               Everyone at {{ company_name }}, with their official role and current load.
+               Opening a profile shows their verified contribution record.
+          </p>
+     </div>
 </div>
 
 <div class="table-wrap">
- <table class="data">
- <caption>{{ rows|length }} active member{{ "s" if rows|length != 1 else "" }}.</caption>
- <thead>
- <tr>
- <th scope="col">Member</th>
- <th scope="col">Official role</th>
- <th scope="col" class="num">Open tasks</th>
- <th scope="col" class="num">Overdue</th>
- <th scope="col" class="num">To review</th>
- <th scope="col" class="num">Projects</th>
- <th scope="col">Level</th>
- <th scope="col">Recognition</th>
- </tr>
- </thead>
- <tbody>
-      {% for row in rows %}
- <tr>
- <td class="nowrap">
- <a class="person" href="{{ url_for('team.profile', username=row.user.username) }}">
- <span class="avatar avatar-sm {{ row.user.username }}">{{ row.user.initials }}</span>
- <span class="name strong">{{ row.user.display_name }}</span>
- </a>
- </td>
- <td>
-          {{ row.user.official_title }}
-          {% if row.user.is_ceo %}<span class="pill no-dot">CEO</span>{% endif %}
- </td>
- <td class="num">{{ row.workload.open_tasks }}</td>
- <td class="num {% if row.workload.overdue %}tone-critical{% endif %}">{{ row.workload.overdue }}</td>
- <td class="num {% if row.workload.awaiting_my_review %}tone-attention{% endif %}">{{ row.workload.awaiting_my_review }}</td>
- <td class="num">{{ row.workload.projects }}</td>
- <td class="nowrap">
- <span class="small">Level {{ row.profile.current_level }} · {{ row.profile.level_name }}</span>
- <div class="progress thin mt-2" style="max-width:110px;">
- <span style="width: {{ row.profile.progress_percent }}%"></span>
- </div>
- </td>
- <td>
-          {% if row.badges %}
- <ul class="tag-list">
-              {% for badge in row.badges %}
- <li class="tag">{{ badge.name }}</li>
-              {% endfor %}
-              {% if row.achievement_count > row.badges|length %}
- <li class="tag">{{ row.achievement_count }} achievements</li>
-              {% endif %}
- </ul>
-          {% elif row.achievement_count %}
- <span class="small muted">{{ row.achievement_count }} achievement{{ "s" if row.achievement_count != 1 else "" }}</span>
-          {% else %}
- <span class="dim small">—</span>
-          {% endif %}
- </td>
- </tr>
-      {% endfor %}
- </tbody>
- </table>
+     <table class="data">
+          <caption>{{ rows|length }} active member{{ "s" if rows|length != 1 else "" }}.</caption>
+          <thead>
+               <tr>
+                    <th scope="col">Member</th>
+                    <th scope="col">Official role</th>
+                    <th scope="col" class="num">Open tasks</th>
+                    <th scope="col" class="num">Overdue</th>
+                    <th scope="col" class="num">To review</th>
+                    <th scope="col" class="num">Projects</th>
+                    <th scope="col">Level</th>
+                    <th scope="col">Recognition</th>
+               </tr>
+          </thead>
+          <tbody>
+               {% for row in rows %}
+               <tr>
+                    <td class="nowrap">
+                         <a class="person" href="{{ url_for('team.profile', username=row.user.username) }}">
+                              <span class="avatar avatar-sm {{ row.user.username }}">{{ row.user.initials }}</span>
+                              <span class="name strong">{{ row.user.display_name }}</span>
+                         </a>
+                    </td>
+                    <td>
+                         {{ row.user.official_title }}
+                         {% if row.user.is_ceo %}<span class="pill no-dot">CEO</span>{% endif %}
+                    </td>
+                    <td class="num">{{ row.workload.open_tasks }}</td>
+                    <td class="num {% if row.workload.overdue %}tone-critical{% endif %}">{{ row.workload.overdue }}
+                    </td>
+                    <td class="num {% if row.workload.awaiting_my_review %}tone-attention{% endif %}">{{
+                         row.workload.awaiting_my_review }}</td>
+                    <td class="num">{{ row.workload.projects }}</td>
+                    <td class="nowrap">
+                         <span class="small">Level {{ row.profile.current_level }} · {{ row.profile.level_name }}</span>
+                         <div class="progress thin mt-2" style="max-width:110px;">
+                              <span style="width: {{ row.profile.progress_percent }}%"></span>
+                         </div>
+                    </td>
+                    <td>
+                         {% if row.badges %}
+                         <ul class="tag-list">
+                              {% for badge in row.badges %}
+                              <li class="tag">{{ badge.name }}</li>
+                              {% endfor %}
+                              {% if row.achievement_count > row.badges|length %}
+                              <li class="tag">{{ row.achievement_count }} achievements</li>
+                              {% endif %}
+                         </ul>
+                         {% elif row.achievement_count %}
+                         <span class="small muted">{{ row.achievement_count }} achievement{{ "s" if
+                              row.achievement_count != 1 else "" }}</span>
+                         {% else %}
+                         <span class="dim small">—</span>
+                         {% endif %}
+                    </td>
+               </tr>
+               {% endfor %}
+          </tbody>
+     </table>
 </div>
 
 <div class="notice mt-6">
- <p class="field-label mb-2">About these figures</p>
- <p class="small muted mb-0">
-      Levels reflect accumulated verified contribution and grant no authority over
-      colleagues. Task counts, review queues and recognition are shown separately
-      because they measure different things and are not comparable with each other.
- </p>
+     <p class="field-label mb-2">About these figures</p>
+     <p class="small muted mb-0">
+          Levels reflect accumulated verified contribution and grant no authority over
+          colleagues. Task counts, review queues and recognition are shown separately
+          because they measure different things and are not comparable with each other.
+     </p>
 </div>
 {% endblock %}

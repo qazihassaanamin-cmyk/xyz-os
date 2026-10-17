@@ -36,14 +36,15 @@ def _visible_query(user):
         row.project_id for row in ProjectMember.query.filter_by(user_id=user.id).all()
     ]
     return query.filter(
-        db.or_(
-            KnowledgeEntry.status == KnowledgeStatus.PUBLISHED.value,
-            KnowledgeEntry.author_id == user.id,
-        )
-    ) & query.filter(
-        db.or_(
-            KnowledgeEntry.project_id.is_(None),
-            KnowledgeEntry.project_id.in_(member_project_ids) if member_project_ids else db.false(),
+        db.and_(
+            db.or_(
+                KnowledgeEntry.status == KnowledgeStatus.PUBLISHED.value,
+                KnowledgeEntry.author_id == user.id,
+            ),
+            db.or_(
+                KnowledgeEntry.project_id.is_(None),
+                KnowledgeEntry.project_id.in_(member_project_ids) if member_project_ids else db.false(),
+            ),
         )
     )
 

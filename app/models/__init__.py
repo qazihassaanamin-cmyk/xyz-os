@@ -10,8 +10,7 @@ from app.models.achievement import (  # noqa: F401
     MemberAchievement,
     MemberBadge,
 )
-from app.models.attachment import Attachment  # noqa: F401
-from app.models.audit import AuditLog  # noqa: F401
+from app.models.attachment import Attachment, ProgressStage  # noqa: F401from app.models.audit import AuditLog  # noqa: F401
 from app.models.base import StrEnum, TimestampMixin, utcnow  # noqa: F401
 from app.models.challenge import (  # noqa: F401
     Challenge,
@@ -22,6 +21,7 @@ from app.models.content import (  # noqa: F401
     Announcement,
     AnnouncementRead,
     AnnouncementScope,
+    DecisionRecord,
     KnowledgeCategory,
     KnowledgeEntry,
     KnowledgeStatus,
@@ -35,7 +35,12 @@ from app.models.focus import (  # noqa: F401
     WorkdayExceptionKind,
 )
 from app.models.login_attempt import LoginAttempt  # noqa: F401
-from app.models.lounge import LoungePost, LoungePostRevision  # noqa: F401
+from app.models.lounge import (  # noqa: F401
+    ChatRoom,
+    LoungePost,
+    LoungePostRevision,
+    LoungeReadState,
+)
 from app.models.notification import Notification, NotificationKind  # noqa: F401
 from app.models.project import (  # noqa: F401
     Milestone,
@@ -47,8 +52,11 @@ from app.models.project import (  # noqa: F401
 )
 from app.models.suggestion import (  # noqa: F401
     Suggestion,
+    SuggestionAnonVote,
     SuggestionCategory,
+    SuggestionComment,
     SuggestionStatus,
+    SuggestionStatusEvent,
     SuggestionVote,
 )
 from app.models.task import (  # noqa: F401
@@ -70,6 +78,8 @@ from app.models.user import Invitation, PasswordResetToken, User, UserRole  # no
 from app.models.xp import (  # noqa: F401
     LevelDefinition,
     Setting,
+    Streak,
+    UserXpSummary,
     XpProfile,
     XpReason,
     XpRule,
@@ -92,6 +102,14 @@ __all__ = [
     "Announcement",
     "AnnouncementRead",
     "AnnouncementScope",
+    "DecisionRecord",
+    "ChatRoom",
+    "LoungeReadState",
+    "SuggestionAnonVote",
+    "SuggestionComment",
+    "SuggestionStatusEvent",
+    "Streak",
+    "UserXpSummary",
     "KnowledgeCategory",
     "KnowledgeEntry",
     "KnowledgeStatus",
@@ -141,4 +159,5 @@ __all__ = [
     "XpReason",
     "XpRule",
     "XpTransaction",
+    "ProgressStage",
 ]

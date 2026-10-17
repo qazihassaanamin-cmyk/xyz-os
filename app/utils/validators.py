@@ -6,6 +6,10 @@ import re
 from datetime import date, datetime
 from urllib.parse import urlparse
 
+from sqlalchemy import case
+
+from app.extensions import db
+
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
@@ -113,3 +117,41 @@ def parse_email(value: str | None) -> str:
     if not EMAIL_RE.match(text):
         raise ValidationError("Enter a valid email address.")
     return text[:255]
+
+
+# ---------------------------------------------------------------------------
+# Portable SQL ordering
+# ---------------------------------------------------------------------------
+
+def nulls_last(column, *, descending: bool = False):
+    """Order by ``column`` with NULLs sorted last, on every dialect.
+
+    PostgreSQL and SQLite disagree about where NULLs land (and only PostgreSQL
+    has ``NULLS LAST`` in older versions, while MySQL never does). Emitting the
+    ordering as an explicit CASE expression keeps one behaviour everywhere:
+    rows without a value sort after rows that have one, whichever way the
+    column itself is sorted.
+    """
+    if descending:
+        return (
+            case((column.is_(None), 1), else_=0),
+            column.desc(),
+        )
+    return (
+        case((column.is_(None), 1), else_=0),
+        column.asc(),
+    )
+
+
+def nulls_last_asc(column):
+    """Ascending order with NULLs last, for use in ``order_by(*nulls_last_asc(col))``."""
+    return nulls_last(column)
+
+
+def nulls_last_desc(column):
+    return nulls_last(column, descending=True)
+
+
+def _unused_guard() -> None:  # pragma: no cover
+    """Keeps the ``db`` import meaningful if the helpers above change."""
+    _ = db

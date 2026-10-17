@@ -8,85 +8,88 @@
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>Suggestion reviews</h1>
- <p class="subtitle">
+  <div>
+    <h1>Suggestion reviews</h1>
+    <p class="subtitle">
       Suggestions that have not had a decision yet, oldest first. A clear answer —
       yes, no, or not yet — is more valuable than leaving one open indefinitely.
- </p>
- </div>
- <div class="page-actions">
- <a class="btn btn-ghost" href="{{ url_for('suggestions.index') }}">The whole board</a>
- </div>
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-ghost" href="{{ url_for('suggestions.index') }}">The whole board</a>
+  </div>
 </div>
 
 {% if suggestions %}
 <div class="stack-6">
-    {% for suggestion in suggestions %}
- <article class="panel">
- <div class="panel-head">
- <div style="min-width:0;">
- <h2 style="margin-bottom:2px;font-size:var(--text-md);">
- <a href="{{ url_for('suggestions.detail', suggestion_id=suggestion.id) }}">{{ suggestion.title }}</a>
- </h2>
- <p class="small muted mb-0">
-            {{ suggestion.display_author }}
-            · raised {{ suggestion.created_at|relative }}
-            · {{ suggestion.category|title }}
-            {% if suggestion.project %} · {{ suggestion.project.name }}{% endif %}
-            · {{ suggestion.vote_count }} vote{{ "s" if suggestion.vote_count != 1 else "" }}
-          </p>
- </div>
-        {{ status_pill(suggestion.status) }}
- </div>
+  {% for suggestion in suggestions %}
+  <article class="panel">
+    <div class="panel-head">
+      <div style="min-width:0;">
+        <h2 style="margin-bottom:2px;font-size:var(--text-md);">
+          <a href="{{ url_for('suggestions.detail', suggestion_id=suggestion.id) }}">{{ suggestion.title }}</a>
+        </h2>
+        <p class="small muted mb-0">
+          {{ suggestion.display_author }}
+          · raised {{ suggestion.created_at|relative }}
+          · {{ suggestion.category|title }}
+          {% if suggestion.project %} · {{ suggestion.project.name }}{% endif %}
+          · {{ suggestion.vote_count }} vote{{ "s" if suggestion.vote_count != 1 else "" }}
+        </p>
+      </div>
+      {{ status_pill(suggestion.status) }}
+    </div>
 
- <div class="panel-body">
- <p class="small" style="margin:0;">{{ suggestion.body }}</p>
- </div>
+    <div class="panel-body">
+      <p class="small" style="margin:0;">{{ suggestion.body }}</p>
+    </div>
 
- <div class="panel-foot">
- <form method="post" action="{{ url_for('suggestions.change_status', suggestion_id=suggestion.id) }}">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
- <div class="grid-2">
- <div class="field">
- <label for="status-{{ suggestion.id }}">Decision</label>
- <select id="status-{{ suggestion.id }}" name="status" required>
- <option value="UNDER_REVIEW">Under review — being considered</option>
- <option value="PLANNED">Planned — we intend to do this</option>
- <option value="IMPLEMENTED">Implemented — this is done</option>
- <option value="DECLINED">Declined — we are not doing this</option>
- </select>
- </div>
- <div class="field">
- <label for="note-{{ suggestion.id }}">Reason or note</label>
- <textarea id="note-{{ suggestion.id }}" name="note" rows="2" maxlength="4000"
-                    placeholder="Required when declining or marking as implemented."></textarea>
- </div>
- </div>
- <div class="btn-row">
- <button type="submit" class="btn btn-primary">Record decision</button>
- <a class="btn btn-ghost" href="{{ url_for('suggestions.detail', suggestion_id=suggestion.id) }}">Open in full</a>
- </div>
- </form>
- </div>
- </article>
-    {% endfor %}
+    <div class="panel-foot">
+      <form method="post" action="{{ url_for('suggestions.change_status', suggestion_id=suggestion.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid-2">
+          <div class="field">
+            <label for="status-{{ suggestion.id }}">Decision</label>
+            <select id="status-{{ suggestion.id }}" name="status" required>
+              <option value="UNDER_REVIEW">Under review — being considered</option>
+              <option value="PLANNED">Planned — we intend to do this</option>
+              <option value="IMPLEMENTED">Implemented — this is done</option>
+              <option value="DECLINED">Declined — we are not doing this</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="note-{{ suggestion.id }}">Reason or note</label>
+            <textarea id="note-{{ suggestion.id }}" name="note" rows="2" maxlength="4000"
+              placeholder="Required when declining or marking as implemented."></textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">Record decision</button>
+          <a class="btn btn-ghost" href="{{ url_for('suggestions.detail', suggestion_id=suggestion.id) }}">Open in
+            full</a>
+        </div>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
 </div>
 
 {% if pagination.pages > 1 %}
 <nav class="pagination" aria-label="Suggestion review pages">
- <span class="summary">{{ pagination.total }} awaiting a decision</span>
-    {% if pagination.has_prev %}<a href="{{ url_for('suggestions.reviews', page=pagination.prev_num) }}">Previous</a>{% endif %}
- <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
-    {% if pagination.has_next %}<a href="{{ url_for('suggestions.reviews', page=pagination.next_num) }}">Next</a>{% endif %}
+  <span class="summary">{{ pagination.total }} awaiting a decision</span>
+  {% if pagination.has_prev %}<a href="{{ url_for('suggestions.reviews', page=pagination.prev_num) }}">Previous</a>{%
+  endif %}
+  <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+  {% if pagination.has_next %}<a href="{{ url_for('suggestions.reviews', page=pagination.next_num) }}">Next</a>{% endif
+  %}
 </nav>
 {% endif %}
 
 {% else %}
 <div class="panel">
   {{ empty_state(
-    "Every suggestion has a decision",
-    "Nothing is waiting. New suggestions appear here as they are raised."
+  "Every suggestion has a decision",
+  "Nothing is waiting. New suggestions appear here as they are raised."
   ) }}
 </div>
 {% endif %}

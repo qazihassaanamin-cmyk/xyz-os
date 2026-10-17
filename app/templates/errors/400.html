@@ -4,16 +4,16 @@
 
 {% block content %}
 <div class="panel" style="max-width: 620px;">
- <div class="panel-body">
- <h1>That request could not be completed</h1>
- <p class="muted">
-      The form was rejected. This usually means the page had been open for a long
-      time, or something was changed in the browser. Reload the page and try again.
- </p>
- <div class="btn-row mt-6">
- <button type="button" class="btn btn-primary" onclick="location.reload()">Reload the page</button>
- <a class="btn" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
- </div>
- </div>
+     <div class="panel-body">
+          <h1>That request could not be completed</h1>
+          <p class="muted">
+               The form was rejected. This usually means the page had been open for a long
+               time, or something was changed in the browser. Reload the page and try again.
+          </p>
+          <div class="btn-row mt-6">
+               <button type="button" class="btn btn-primary" onclick="location.reload()">Reload the page</button>
+               <a class="btn" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
+          </div>
+     </div>
 </div>
 {% endblock %}

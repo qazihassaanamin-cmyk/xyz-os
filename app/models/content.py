@@ -16,7 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
-from app.models.base import StrEnum, TimestampMixin, utcnow
+from app.models.base import StrEnum, TimestampMixin, as_utc, utcnow
 
 
 class AnnouncementScope(StrEnum):
@@ -72,14 +72,8 @@ class Announcement(TimestampMixin, db.Model):
 
     @property
     def is_expired(self) -> bool:
-        if self.expires_at is None:
-            return False
-        expires = self.expires_at
-        if expires.tzinfo is None:
-            from datetime import timezone as _tz
-
-            expires = expires.replace(tzinfo=_tz.utc)
-        return expires <= utcnow()
+        expires = as_utc(self.expires_at)
+        return expires is not None and expires <= utcnow()
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Announcement {self.id} {self.title[:40]!r}>"
@@ -153,3 +147,54 @@ class KnowledgeEntry(TimestampMixin, db.Model):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<KnowledgeEntry {self.id} {self.slug!r} {self.status}>"
+
+
+class DecisionRecord(TimestampMixin, db.Model):
+    """A decision the company has made, with its reasoning and consequences.
+
+    Kept separate from the knowledge base on purpose: a knowledge entry explains
+    *how* something works, a decision record explains *why* it was chosen and
+    what was traded away. When a decision is revisited, the original record is
+    superseded rather than rewritten, so the reasoning at the time survives.
+    """
+
+    __tablename__ = "decision_records"
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    slug: Mapped[str] = mapped_column(String(220), nullable=False, unique=True, index=True)
+    # The situation that forced a decision.
+    context: Mapped[str] = mapped_column(Text, nullable=False)
+    decision: Mapped[str] = mapped_column(Text, nullable=False)
+    consequences: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # What was considered and rejected, and why. Optional but encouraged.
+    alternatives: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="PROPOSED", index=True
+    )
+    decided_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Set when a later decision replaces this one.
+    superseded_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("decision_records.id", ondelete="SET NULL"), nullable=True
+    )
+    # Set once the CEO has approved the record for the knowledge base.
+    approved_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    xp_awarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    author = relationship("User", foreign_keys=[decided_by_id])
+    approved_by = relationship("User", foreign_keys=[approved_by_id])
+    project = relationship("Project", foreign_keys=[project_id])
+    superseded_by = relationship(
+        "DecisionRecord", remote_side="DecisionRecord.id", foreign_keys=[superseded_by_id]
+    )
+
+    __table_args__ = (Index("ix_decision_records_status_created", "status", "created_at"),)

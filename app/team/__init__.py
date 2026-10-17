@@ -14,7 +14,7 @@ from flask_login import current_user
 
 from app.extensions import db, limiter
 from app.founders import FOUNDERS, founder_by_identifier
-from app.models.project import ProjectMember, ProjectRole
+from app.models.project import Project, ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.permissions import can_view_xp_history, is_ceo, login_required
@@ -27,6 +27,7 @@ from app.services import (
     xp_service,
 )
 from app.utils.dates import company_today, deadline_label, humanise_seconds
+from app.utils.validators import nulls_last_asc
 
 bp = Blueprint("team", __name__)
 
@@ -90,6 +91,7 @@ def profile(username: str):
         "page_title": user.display_name,
         "member": user,
         "profile": profile,
+        "xp_profile": profile,
         "meta": meta,
         "is_self": is_self,
         "is_ceo": is_ceo(current_user),
@@ -123,7 +125,7 @@ def _member_projects(user):
     return (
         ProjectMember.query.filter_by(user_id=user.id)
         .join(ProjectMember.project)
-        .order_by(db.text("projects.name ASC"))
+        .order_by(Project.name.asc())
         .all()
     )
 
@@ -134,7 +136,7 @@ def _member_open_tasks(user, limit: int = 10):
             Task.assignee_id == user.id,
             Task.status.notin_([TaskStatus.COMPLETED.value, TaskStatus.CANCELLED.value]),
         )
-        .order_by(Task.due_date.asc().nulls_last())
+        .order_by(*nulls_last_asc(Task.due_date))
         .limit(limit)
         .all()
     )
@@ -178,6 +180,8 @@ def edit_profile(username: str):
     if is_ceo(current_user) and user.id != current_user.id:
         title = (request.form.get("title") or "").strip()[:160] or None
         user.title = title
+        functions = (request.form.get("functions") or "").strip()[:2000] or None
+        user.functions = functions
     db.session.commit()
 
     from app.services.audit_service import record_audit

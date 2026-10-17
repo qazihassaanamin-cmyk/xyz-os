@@ -11,17 +11,18 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+# When Alembic is driven programmatically (the test suite applies the chain to a
+# throwaway database) there is no config file to load, and reconfiguring the root
+# logger would swallow the host process's output.
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
-    try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
-        return current_app.extensions['migrate'].db.get_engine()
-    except (TypeError, AttributeError):
-        # this works with Flask-SQLAlchemy>=3
-        return current_app.extensions['migrate'].db.engine
+    # Flask-SQLAlchemy 3 exposes the engine directly; ``get_engine()`` is
+    # deprecated and emits a warning on every call.
+    return current_app.extensions['migrate'].db.engine
 
 
 def get_engine_url():
@@ -95,16 +96,21 @@ def run_migrations_online():
         conf_args["process_revision_directives"] = process_revision_directives
 
     connectable = get_engine()
-
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
+            # SQLite issues DDL outside a transaction; the explicit commit below
+            # is what makes the schema durable before the caller reads it.
+            transaction_per_migration=True,
             **conf_args
         )
 
         with context.begin_transaction():
             context.run_migrations()
+
+        if getattr(connection, "in_transaction", lambda: False)():
+            connection.commit()
 
 
 if context.is_offline_mode():

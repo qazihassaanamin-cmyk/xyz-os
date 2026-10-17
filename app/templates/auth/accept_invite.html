@@ -7,7 +7,7 @@
 <h1>Create your account</h1>
 <p class="lede">
   This invitation is for <strong>{{ invitation.email }}</strong>, joining as
- <strong>{{ invitation.role|title }}</strong>. Choose your own username and
+  <strong>{{ invitation.role|title }}</strong>. Choose your own username and
   password. The CEO will never ask you for your password.
 </p>
 
@@ -15,20 +15,20 @@
   {{ form.hidden_tag() }}
 
   {{ wt_field(form.username, autocomplete="username",
-              hint="Letters, digits, dots, dashes and underscores. This is how colleagues will see you.") }}
+  hint="Letters, digits, dots, dashes and underscores. This is how colleagues will see you.") }}
   {{ wt_field(form.full_name, autocomplete="name") }}
   {{ wt_field(form.password, type="password", autocomplete="new-password",
-              hint="At least 12 characters, including a letter and a number.") }}
+  hint="At least 12 characters, including a letter and a number.") }}
   {{ wt_field(form.confirm, type="password", autocomplete="new-password") }}
   {{ wt_field(form.timezone, hint="Used to decide when your working day starts and ends.") }}
 
- <button type="submit" class="btn btn-primary btn-block">Create my account</button>
+  <button type="submit" class="btn btn-primary btn-block">Create my account</button>
 </form>
 
 <div class="auth-foot">
- <p class="mb-0">
+  <p class="mb-0">
     Your password is stored only as a secure hash. Nobody, including the CEO, can
     read it back.
- </p>
+  </p>
 </div>
 {% endblock %}

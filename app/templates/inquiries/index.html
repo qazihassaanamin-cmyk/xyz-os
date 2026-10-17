@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+{% from "partials/_status_pill.html" import status_pill %}
+
+{% block title %}Inquiries{% endblock %}
+
+{% block breadcrumb %}<span>Inquiries</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Inquiries</h1>
+        <p class="subtitle">
+            Questions from the CEO to the founders about compliance, delivery or
+            conduct. Every member can read the board. Only the CEO can raise an
+            inquiry; only the founder it is addressed to can reply.
+        </p>
+    </div>
+    {% if is_ceo %}
+    <div class="page-actions">
+        <a class="btn" href="{{ url_for('inquiries.new') }}">Raise an inquiry</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="stat-strip mb-6">
+    <div class="stat">
+        <span class="label">Total</span>
+        <span class="value numeric">{{ stats.total }}</span>
+    </div>
+    <div class="stat">
+        <span class="label">Unanswered</span>
+        <span class="value numeric {% if stats.unanswered %}attention{% endif %}">{{ stats.unanswered }}</span>
+    </div>
+    <div class="stat">
+        <span class="label">Open</span>
+        <span class="value numeric">{{ stats.open }}</span>
+    </div>
+    <div class="stat">
+        <span class="label">Resolved</span>
+        <span class="value numeric positive">{{ stats.resolved }}</span>
+    </div>
+    <div class="stat">
+        <span class="label">Closed</span>
+        <span class="value numeric">{{ stats.closed }}</span>
+    </div>
+</div>
+
+{% if inquiries %}
+<div class="stack-4">
+    {% for inquiry in inquiries %}
+    <a class="panel panel-link" href="{{ url_for('inquiries.detail', inquiry_id=inquiry.id) }}">
+        <div class="panel-head">
+            <div>
+                <h2 style="margin-bottom:2px;font-size:var(--text-md);">{{ inquiry.subject }}</h2>
+                <p class="small muted mb-0">
+                    Raised by {{ inquiry.raised_by.display_name if inquiry.raised_by else "—" }}
+                    {% if inquiry.addressed_to %}· to {{ inquiry.addressed_to.display_name }}{% else %}· company-wide{% endif %}
+                    · {{ inquiry.created_at|relative }}
+                </p>
+            </div>
+            <span class="trail">{{ status_pill(inquiry.status) }}</span>
+        </div>
+        <div class="panel-body">
+            <p class="small mb-0" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                {{ inquiry.body }}
+            </p>
+            {% if inquiry.replies %}
+            <p class="tiny dim mt-2">{{ inquiry.replies|length }} repl{{ "y" if inquiry.replies|length == 1 else "ies" }}</p>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+    {{ empty_state("No inquiries yet", "When the CEO raises an inquiry about compliance, delivery or conduct, it appears here for every member to read.") }}
+{% endif %}
+{% endblock %}

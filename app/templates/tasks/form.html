@@ -3,183 +3,198 @@
 {% block title %}{{ "Edit task" if task else "New task" }}{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('tasks.index') }}">Tasks</a>
- <span aria-hidden="true">/</span>
- <span>{{ "Edit" if task else "New task" }}</span>
+<a href="{{ url_for('tasks.index') }}">Tasks</a>
+<span aria-hidden="true">/</span>
+<span>{{ "Edit" if task else "New task" }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>{{ "Edit task" if task else "New task" }}</h1>
- <p class="subtitle">
-      Difficulty determines the XP the work is worth once it is accepted, so it
-      should reflect the real effort and risk — not the size of the request.
- </p>
- </div>
+     <div>
+          <h1>{{ "Edit task" if task else "New task" }}</h1>
+          <p class="subtitle">
+               Difficulty determines the XP the work is worth once it is accepted, so it
+               should reflect the real effort and risk — not the size of the request.
+          </p>
+     </div>
 </div>
 
 <form method="post" class="workspace"
-      action="{{ url_for('tasks.edit', task_id=task.id) if task else url_for('tasks.create') }}">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+     action="{{ url_for('tasks.edit', task_id=task.id) if task else url_for('tasks.create') }}">
+     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
- <div>
- <section class="panel">
- <div class="panel-head"><h2>The brief</h2></div>
- <div class="panel-body">
+     <div>
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>The brief</h2>
+               </div>
+               <div class="panel-body">
 
- <div class="field">
- <label for="title">Title <span class="tone-critical" aria-hidden="true">*</span></label>
- <input id="title" name="title" type="text" required minlength="3" maxlength="220"
-                 value="{{ task.title if task else '' }}"
-                 placeholder="A specific, verifiable piece of work">
- </div>
+                    <div class="field">
+                         <label for="title">Title <span class="tone-critical" aria-hidden="true">*</span></label>
+                         <input id="title" name="title" type="text" required minlength="3" maxlength="220"
+                              value="{{ task.title if task else '' }}"
+                              placeholder="A specific, verifiable piece of work">
+                    </div>
 
- <div class="field">
- <label for="description">Description</label>
- <textarea id="description" name="description" rows="6"
-                  placeholder="What is being asked for, and any context someone new to this would need.">{{ task.description or '' if task else '' }}</textarea>
- <p class="field-hint">Plain text. Line breaks are preserved.</p>
- </div>
+                    <div class="field">
+                         <label for="description">Description</label>
+                         <textarea id="description" name="description" rows="6"
+                              placeholder="What is being asked for, and any context someone new to this would need.">{{ task.description or '' if task else '' }}</textarea>
+                         <p class="field-hint">Plain text. Line breaks are preserved.</p>
+                    </div>
 
- <div class="field">
- <label for="acceptance_criteria">Acceptance criteria</label>
- <textarea id="acceptance_criteria" name="acceptance_criteria" rows="4"
-                  placeholder="The specific conditions that must be true for this to be accepted.">{{ task.acceptance_criteria or '' if task else '' }}</textarea>
- <p class="field-hint">
-            Written before work starts. Without this, approval becomes a matter of opinion.
- </p>
- </div>
- </div>
- </section>
+                    <div class="field">
+                         <label for="acceptance_criteria">Acceptance criteria</label>
+                         <textarea id="acceptance_criteria" name="acceptance_criteria" rows="4"
+                              placeholder="The specific conditions that must be true for this to be accepted.">{{ task.acceptance_criteria or '' if task else '' }}</textarea>
+                         <p class="field-hint">
+                              Written before work starts. Without this, approval becomes a matter of opinion.
+                         </p>
+                    </div>
+               </div>
+          </section>
 
- <section class="panel">
- <div class="panel-head"><h2>Ownership</h2></div>
- <div class="panel-body">
- <div class="grid-2">
- <div class="field">
- <label for="project_id">Project</label>
- <select id="project_id" name="project_id">
- <option value="">No project — internal or one-off work</option>
-              {% for option in projects %}
- <option value="{{ option.id }}"
-                  {% if (task and task.project_id == option.id) or (not task and project and project.id == option.id) %}selected{% endif %}>
-                {{ option.name }}
- </option>
-              {% endfor %}
- </select>
- </div>
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Ownership</h2>
+               </div>
+               <div class="panel-body">
+                    <div class="grid-2">
+                         <div class="field">
+                              <label for="project_id">Project</label>
+                              <select id="project_id" name="project_id">
+                                   <option value="">No project — internal or one-off work</option>
+                                   {% for option in projects %}
+                                   <option value="{{ option.id }}" {% if (task and task.project_id==option.id) or (not
+                                        task and project and project.id==option.id) %}selected{% endif %}>
+                                        {{ option.name }}
+                                   </option>
+                                   {% endfor %}
+                              </select>
+                         </div>
 
- <div class="field">
- <label for="milestone_id">Milestone</label>
- <select id="milestone_id" name="milestone_id">
- <option value="">Not part of a milestone</option>
-              {% for milestone in milestones %}
- <option value="{{ milestone.id }}" {% if task and task.milestone_id == milestone.id %}selected{% endif %}>
-                {{ milestone.title }}
- </option>
-              {% endfor %}
- </select>
- </div>
+                         <div class="field">
+                              <label for="milestone_id">Milestone</label>
+                              <select id="milestone_id" name="milestone_id">
+                                   <option value="">Not part of a milestone</option>
+                                   {% for milestone in milestones %}
+                                   <option value="{{ milestone.id }}" {% if task and task.milestone_id==milestone.id
+                                        %}selected{% endif %}>
+                                        {{ milestone.title }}
+                                   </option>
+                                   {% endfor %}
+                              </select>
+                         </div>
 
- <div class="field">
- <label for="assignee_id">Assign to</label>
- <select id="assignee_id" name="assignee_id">
- <option value="">Leave unassigned (backlog)</option>
-              {% for member in members %}
- <option value="{{ member.id }}" {% if task and task.assignee_id == member.id %}selected{% endif %}>
-                {{ member.display_name }}
- </option>
-              {% endfor %}
- </select>
- </div>
+                         <div class="field">
+                              <label for="assignee_id">Assign to</label>
+                              <select id="assignee_id" name="assignee_id">
+                                   <option value="">Leave unassigned (backlog)</option>
+                                   {% for member in members %}
+                                   <option value="{{ member.id }}" {% if task and task.assignee_id==member.id
+                                        %}selected{% endif %}>
+                                        {{ member.display_name }}
+                                   </option>
+                                   {% endfor %}
+                              </select>
+                         </div>
 
- <div class="field">
- <label for="reviewer_id">Reviewer</label>
- <select id="reviewer_id" name="reviewer_id">
- <option value="">Not set — the CEO reviews</option>
-              {% for member in members %}
- <option value="{{ member.id }}" {% if task and task.reviewer_id == member.id %}selected{% endif %}>
-                {{ member.display_name }}
- </option>
-              {% endfor %}
- </select>
- <p class="field-hint">A task can never be reviewed by its own assignee.</p>
- </div>
- </div>
- </div>
- </section>
- </div>
+                         <div class="field">
+                              <label for="reviewer_id">Reviewer</label>
+                              <select id="reviewer_id" name="reviewer_id">
+                                   <option value="">Not set — the CEO reviews</option>
+                                   {% for member in members %}
+                                   <option value="{{ member.id }}" {% if task and task.reviewer_id==member.id
+                                        %}selected{% endif %}>
+                                        {{ member.display_name }}
+                                   </option>
+                                   {% endfor %}
+                              </select>
+                              <p class="field-hint">A task can never be reviewed by its own assignee.</p>
+                         </div>
+                    </div>
+               </div>
+          </section>
+     </div>
 
- <aside class="rail">
- <section class="panel">
- <div class="panel-head"><h2>Planning</h2></div>
- <div class="panel-body">
- <div class="field">
- <label for="priority">Priority</label>
- <select id="priority" name="priority">
-            {% for value in priorities %}
- <option value="{{ value }}" {% if (task and task.priority == value) or (not task and value == 'NORMAL') %}selected{% endif %}>
-              {{ value|title }}
- </option>
-            {% endfor %}
- </select>
- </div>
+     <aside class="rail">
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Planning</h2>
+               </div>
+               <div class="panel-body">
+                    <div class="field">
+                         <label for="priority">Priority</label>
+                         <select id="priority" name="priority">
+                              {% for value in priorities %}
+                              <option value="{{ value }}" {% if (task and task.priority==value) or (not task and
+                                   value=='NORMAL' ) %}selected{% endif %}>
+                                   {{ value|title }}
+                              </option>
+                              {% endfor %}
+                         </select>
+                    </div>
 
- <div class="field">
- <label for="difficulty">Difficulty</label>
- <select id="difficulty" name="difficulty">
-            {% for value in difficulties %}
- <option value="{{ value }}" {% if (task and task.difficulty == value) or (not task and value == 'MEDIUM') %}selected{% endif %}>
-              {{ value|title }}
- </option>
-            {% endfor %}
- </select>
- <p class="field-hint">
-            Small 40% · Medium 100% · Large 200% · Critical 350% of the base reward.
- </p>
- </div>
+                    <div class="field">
+                         <label for="difficulty">Difficulty</label>
+                         <select id="difficulty" name="difficulty">
+                              {% for value in difficulties %}
+                              <option value="{{ value }}" {% if (task and task.difficulty==value) or (not task and
+                                   value=='MEDIUM' ) %}selected{% endif %}>
+                                   {{ value|title }}
+                              </option>
+                              {% endfor %}
+                         </select>
+                         <p class="field-hint">
+                              Small 40% · Medium 100% · Large 200% · Critical 350% of the base reward.
+                         </p>
+                    </div>
 
- <div class="field">
- <label for="base_xp">Base XP reward</label>
- <input id="base_xp" name="base_xp" type="number" min="0" max="1000" step="5"
-                 value="{{ task.base_xp if task else 100 }}">
- <p class="field-hint">
-            Multiplied by the difficulty above. Awarded only when the work is accepted.
- </p>
- </div>
+                    <div class="field">
+                         <label for="base_xp">Base XP reward</label>
+                         <input id="base_xp" name="base_xp" type="number" min="0" max="1000" step="5"
+                              value="{{ task.base_xp if task else 100 }}">
+                         <p class="field-hint">
+                              Multiplied by the difficulty above. Awarded only when the work is accepted.
+                         </p>
+                    </div>
 
- <div class="field">
- <label for="start_date">Start date</label>
- <input id="start_date" name="start_date" type="date"
-                 value="{{ task.start_date.isoformat() if task and task.start_date else '' }}">
- </div>
+                    <div class="field">
+                         <label for="start_date">Start date</label>
+                         <input id="start_date" name="start_date" type="date"
+                              value="{{ task.start_date.isoformat() if task and task.start_date else '' }}">
+                    </div>
 
- <div class="field">
- <label for="due_date">Deadline</label>
- <input id="due_date" name="due_date" type="date"
-                 value="{{ task.due_date.isoformat() if task and task.due_date else '' }}">
- </div>
- </div>
+                    <div class="field">
+                         <label for="due_date">Deadline</label>
+                         <input id="due_date" name="due_date" type="date"
+                              value="{{ task.due_date.isoformat() if task and task.due_date else '' }}">
+                    </div>
+               </div>
 
- <div class="panel-foot">
- <div class="btn-row">
- <button type="submit" class="btn btn-primary">{{ "Save changes" if task else "Create task" }}</button>
- <a class="btn btn-ghost" href="{{ url_for('tasks.detail', task_id=task.id) if task else url_for('tasks.index') }}">Cancel</a>
- </div>
- </div>
- </section>
+               <div class="panel-foot">
+                    <div class="btn-row">
+                         <button type="submit" class="btn btn-primary">{{ "Save changes" if task else "Create task"
+                              }}</button>
+                         <a class="btn btn-ghost"
+                              href="{{ url_for('tasks.detail', task_id=task.id) if task else url_for('tasks.index') }}">Cancel</a>
+                    </div>
+               </div>
+          </section>
 
-  {% if task %}
- <section class="panel">
- <div class="panel-head"><h2>Progress note</h2></div>
- <div class="panel-body">
- <label class="visually-hidden" for="progress_note">Progress note</label>
- <textarea id="progress_note" name="progress_note" rows="3"
-              placeholder="Where this stands right now.">{{ task.progress_note or '' }}</textarea>
- </div>
- </section>
-  {% endif %}
- </aside>
+          {% if task %}
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Progress note</h2>
+               </div>
+               <div class="panel-body">
+                    <label class="visually-hidden" for="progress_note">Progress note</label>
+                    <textarea id="progress_note" name="progress_note" rows="3"
+                         placeholder="Where this stands right now.">{{ task.progress_note or '' }}</textarea>
+               </div>
+          </section>
+          {% endif %}
+     </aside>
 </form>
 {% endblock %}

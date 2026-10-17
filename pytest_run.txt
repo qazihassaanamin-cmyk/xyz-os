@@ -1,0 +1,20 @@
+﻿F
+================================== FAILURES ===================================
+___________________ TestLogin.test_valid_login_by_username ____________________
+tests\test_auth.py:25: in test_valid_login_by_username
+    assert response.status_code == 302
+E   assert 400 == 302
+E    +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+============================== warnings summary ===============================
+tests/test_auth.py::TestLogin::test_valid_login_by_username
+  C:\Users\QaziH\xyz-os\tests\conftest.py:60: DeprecationWarning: 'get_engine' is deprecated and will be removed in Flask-SQLAlchemy 3.2. Use 'engine' or 'engines[key]' instead. If you're using Flask-Migrate or Alembic, you'll need to update your 'env.py' file.
+    _db.get_engine().dispose()
+
+tests/test_auth.py::TestLogin::test_valid_login_by_username
+  C:\Users\QaziH\xyz-os\.venv\Lib\site-packages\flask_sqlalchemy\extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: submissions, tasks; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_auth.py::TestLogin::test_valid_login_by_username - assert 4...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!

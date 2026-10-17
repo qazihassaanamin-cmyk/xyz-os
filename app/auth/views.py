@@ -105,7 +105,7 @@ def login():
             user_id=user.id,
         )
         flash(f"Welcome back, {user.display_name.split()[0]}.", "success")
-        return redirect(_safe_next(next_target))
+        return redirect(_safe_next(next_target) if next_target else _landing_for(user))
 
     return render_template(
         "auth/login.html",
@@ -113,6 +113,29 @@ def login():
         next_target=next_target,
         page_title="Sign in",
     )
+
+
+def _landing_for(user) -> str:
+    """Where a freshly signed-in member should land.
+
+    Mirrors the logic in ``main.root`` so the two can never drift apart: the CEO
+    goes to the command centre, a project lead goes to their projects, and every
+    other member goes to their personal dashboard.
+    """
+    if user.is_ceo:
+        return url_for("dashboard.ceo")
+
+    from app.models.project import ProjectMember, ProjectRole
+
+    leads_something = (
+        ProjectMember.query.filter_by(
+            user_id=user.id, role_in_project=ProjectRole.LEAD.value
+        ).first()
+        is not None
+    )
+    if leads_something:
+        return url_for("projects.index")
+    return url_for("dashboard.index")
 
 
 def _start_session(user, *, remember: bool) -> None:

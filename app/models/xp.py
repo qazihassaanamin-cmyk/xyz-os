@@ -13,10 +13,11 @@ Design rules enforced here:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -314,3 +315,73 @@ class Setting(TimestampMixin, db.Model):
             except (TypeError, ValueError):
                 return None
         return self.value
+
+
+class Streak(TimestampMixin, db.Model):
+    """A per-member streak, stored per kind.
+
+    Streaks count *working days* on which a verified action happened. Approved
+    leave and company holidays neither extend nor break a run, so nobody is
+    punished for taking agreed time off. The kind is one of ``focus``,
+    ``report`` or ``delivery``.
+    """
+
+    __tablename__ = "streaks"
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    current_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    best_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # The most recent working day that counted toward the run.
+    last_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    # The day the current run began, used to make the bonus idempotent per run.
+    started_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    broken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "kind", name="uq_streak_member_kind"),
+        Index("ix_streaks_kind_current", "kind", "current_count"),
+    )
+
+    @property
+    def is_active(self) -> bool:
+        return self.current_count > 0 and self.broken_at is None
+
+
+class UserXpSummary(TimestampMixin, db.Model):
+    """A materialised view of one member's XP, rebuilt from the ledger.
+
+    ``xp_transactions`` is the single source of truth; this table exists so a
+    dashboard can read a member's totals in one row instead of aggregating the
+    whole ledger on every request. It is rebuilt by ``flask xp-reconcile`` and
+    after any correction, and the reconcile command asserts that the two agree.
+    """
+
+    __tablename__ = "user_xp_summary"
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lifetime_xp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    awarded_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    deducted_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reversed_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    current_level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    level_name: Mapped[str] = mapped_column(String(40), nullable=False, default="Initiate")
+    transaction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    first_award_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_award_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When this row was last rebuilt, so staleness is visible rather than guessed.
+    rebuilt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<UserXpSummary user={self.user_id} lifetime={self.lifetime_xp}>"

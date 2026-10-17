@@ -29,7 +29,7 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.attachment import Attachment
-from app.models.base import utcnow
+from app.models.base import as_utc, utcnow
 from app.services.audit_service import record_audit
 
 log = logging.getLogger(__name__)
@@ -417,13 +417,9 @@ def can_delete(attachment: Attachment, user) -> bool:
         return True
     if attachment.uploaded_by_id != user.id:
         return False
-    if attachment.created_at is None:
+    created = as_utc(attachment.created_at)
+    if created is None:
         return False
-    created = attachment.created_at
-    if created.tzinfo is None:
-        from datetime import timezone
-
-        created = created.replace(tzinfo=timezone.utc)
     return (utcnow() - created) <= DELETABLE_WINDOW
 
 

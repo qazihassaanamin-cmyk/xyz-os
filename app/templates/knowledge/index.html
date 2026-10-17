@@ -7,134 +7,136 @@
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>Knowledge</h1>
- <p class="subtitle">
-      How {{ company_name }} actually works — decisions, processes, technical notes and
-      reference material. Writing something down once saves explaining it repeatedly.
- </p>
- </div>
- <div class="page-actions">
- <a class="btn btn-primary" href="{{ url_for('knowledge.create') }}">New entry</a>
- </div>
+   <div>
+      <h1>Knowledge</h1>
+      <p class="subtitle">
+         How {{ company_name }} actually works — decisions, processes, technical notes and
+         reference material. Writing something down once saves explaining it repeatedly.
+      </p>
+   </div>
+   <div class="page-actions">
+      <a class="btn btn-primary" href="{{ url_for('knowledge.create') }}">New entry</a>
+   </div>
 </div>
 
 <form class="filters" method="get" action="{{ url_for('knowledge.index') }}">
- <div class="filter filter-wide">
- <label for="q">Search title and body</label>
- <input id="q" name="q" type="search" value="{{ query_string }}" placeholder="Search the knowledge base">
- </div>
- <div class="filter">
- <label for="category">Category</label>
- <select id="category" name="category">
- <option value="">Any</option>
-    {% for value in categories %}
- <option value="{{ value }}" {% if category|upper == value %}selected{% endif %}>{{ value|title }}</option>
-    {% endfor %}
- </select>
- </div>
- <div class="filter">
- <label for="project">Project</label>
- <select id="project" name="project">
- <option value="">Any</option>
-    {% for project in projects %}
- <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
-    {% endfor %}
- </select>
- </div>
- <div class="filter">
- <label for="status">Status</label>
- <select id="status" name="status">
- <option value="">Any</option>
- <option value="PUBLISHED" {% if status|upper == 'PUBLISHED' %}selected{% endif %}>Published</option>
- <option value="DRAFT" {% if status|upper == 'DRAFT' %}selected{% endif %}>Draft</option>
- <option value="ARCHIVED" {% if status|upper == 'ARCHIVED' %}selected{% endif %}>Archived</option>
- </select>
- </div>
- <div class="row row-tight">
- <button type="submit" class="btn">Search</button>
- <a class="btn btn-ghost" href="{{ url_for('knowledge.index') }}">Reset</a>
- </div>
+   <div class="filter filter-wide">
+      <label for="q">Search title and body</label>
+      <input id="q" name="q" type="search" value="{{ query_string }}" placeholder="Search the knowledge base">
+   </div>
+   <div class="filter">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+         <option value="">Any</option>
+         {% for value in categories %}
+         <option value="{{ value }}" {% if category|upper==value %}selected{% endif %}>{{ value|title }}</option>
+         {% endfor %}
+      </select>
+   </div>
+   <div class="filter">
+      <label for="project">Project</label>
+      <select id="project" name="project">
+         <option value="">Any</option>
+         {% for project in projects %}
+         <option value="{{ project.id }}" {% if project_id==project.id %}selected{% endif %}>{{ project.name }}</option>
+         {% endfor %}
+      </select>
+   </div>
+   <div class="filter">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+         <option value="">Any</option>
+         <option value="PUBLISHED" {% if status|upper=='PUBLISHED' %}selected{% endif %}>Published</option>
+         <option value="DRAFT" {% if status|upper=='DRAFT' %}selected{% endif %}>Draft</option>
+         <option value="ARCHIVED" {% if status|upper=='ARCHIVED' %}selected{% endif %}>Archived</option>
+      </select>
+   </div>
+   <div class="row row-tight">
+      <button type="submit" class="btn">Search</button>
+      <a class="btn btn-ghost" href="{{ url_for('knowledge.index') }}">Reset</a>
+   </div>
 </form>
 
 {% if entries %}
 <div class="table-wrap">
- <table class="data">
- <caption>
-      {{ pagination.total }} entr{{ "y" if pagination.total == 1 else "ies" }}.
-      Decision records are listed first because they are the ones people need to find again.
- </caption>
- <thead>
- <tr>
- <th scope="col">Title</th>
- <th scope="col">Category</th>
- <th scope="col">Project</th>
- <th scope="col">Author</th>
- <th scope="col">Status</th>
- <th scope="col">Updated</th>
- </tr>
- </thead>
- <tbody>
-      {% for entry in entries %}
- <tr>
- <td>
- <a class="strong" href="{{ url_for('knowledge.detail', entry_id=entry.id) }}">{{ entry.title }}</a>
-          {% if entry.is_decision_record %}
- <span class="pill no-dot tone-attention">Decision</span>
-          {% endif %}
-          {% if entry.summary %}
- <div class="small muted">{{ entry.summary|truncate(110) }}</div>
-          {% else %}
- <div class="small muted">{{ excerpt(entry.body, 110) }}</div>
-          {% endif %}
- </td>
- <td class="nowrap">{{ entry.category|title }}</td>
- <td class="nowrap">
-          {% if entry.project %}{{ entry.project.name }}{% else %}<span class="dim">—</span>{% endif %}
- </td>
- <td class="nowrap">
-          {% if entry.author %}{{ entry.author.display_name }}{% else %}<span class="dim">—</span>{% endif %}
- </td>
- <td class="nowrap">
- <span class="pill pill-{{ entry.status|lower }}">{{ entry.status|title }}</span>
- </td>
- <td class="nowrap small muted">{{ entry.updated_at|relative }}</td>
- </tr>
-      {% endfor %}
- </tbody>
- </table>
+   <table class="data">
+      <caption>
+         {{ pagination.total }} entr{{ "y" if pagination.total == 1 else "ies" }}.
+         Decision records are listed first because they are the ones people need to find again.
+      </caption>
+      <thead>
+         <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Category</th>
+            <th scope="col">Project</th>
+            <th scope="col">Author</th>
+            <th scope="col">Status</th>
+            <th scope="col">Updated</th>
+         </tr>
+      </thead>
+      <tbody>
+         {% for entry in entries %}
+         <tr>
+            <td>
+               <a class="strong" href="{{ url_for('knowledge.detail', entry_id=entry.id) }}">{{ entry.title }}</a>
+               {% if entry.is_decision_record %}
+               <span class="pill no-dot tone-attention">Decision</span>
+               {% endif %}
+               {% if entry.summary %}
+               <div class="small muted">{{ entry.summary|truncate(110) }}</div>
+               {% else %}
+               <div class="small muted">{{ excerpt(entry.body, 110) }}</div>
+               {% endif %}
+            </td>
+            <td class="nowrap">{{ entry.category|title }}</td>
+            <td class="nowrap">
+               {% if entry.project %}{{ entry.project.name }}{% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="nowrap">
+               {% if entry.author %}{{ entry.author.display_name }}{% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="nowrap">
+               <span class="pill pill-{{ entry.status|lower }}">{{ entry.status|title }}</span>
+            </td>
+            <td class="nowrap small muted">{{ entry.updated_at|relative }}</td>
+         </tr>
+         {% endfor %}
+      </tbody>
+   </table>
 </div>
 
 {% if pagination.pages > 1 %}
 <nav class="pagination" aria-label="Knowledge pages">
- <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
-    {% if pagination.has_prev %}
- <a href="{{ url_for('knowledge.index', page=pagination.prev_num, q=query_string, category=category, project=project_id, status=status) }}">Previous</a>
-    {% endif %}
- <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
-    {% if pagination.has_next %}
- <a href="{{ url_for('knowledge.index', page=pagination.next_num, q=query_string, category=category, project=project_id, status=status) }}">Next</a>
-    {% endif %}
+   <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+   {% if pagination.has_prev %}
+   <a
+      href="{{ url_for('knowledge.index', page=pagination.prev_num, q=query_string, category=category, project=project_id, status=status) }}">Previous</a>
+   {% endif %}
+   <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+   {% if pagination.has_next %}
+   <a
+      href="{{ url_for('knowledge.index', page=pagination.next_num, q=query_string, category=category, project=project_id, status=status) }}">Next</a>
+   {% endif %}
 </nav>
 {% endif %}
 
 {% else %}
 <div class="panel">
-  {% if query_string or category or project_id or status %}
-    {{ empty_state(
-      "Nothing matches that search",
-      "Try a shorter search term, or clear the filters.",
-      url_for('knowledge.index'),
-      "Clear the filters"
-    ) }}
-  {% else %}
-    {{ empty_state(
-      "The knowledge base is empty",
-      "Start with the thing you have explained twice this week. That is usually the entry worth writing.",
-      url_for('knowledge.create'),
-      "Write the first entry"
-    ) }}
-  {% endif %}
+   {% if query_string or category or project_id or status %}
+   {{ empty_state(
+   "Nothing matches that search",
+   "Try a shorter search term, or clear the filters.",
+   url_for('knowledge.index'),
+   "Clear the filters"
+   ) }}
+   {% else %}
+   {{ empty_state(
+   "The knowledge base is empty",
+   "Start with the thing you have explained twice this week. That is usually the entry worth writing.",
+   url_for('knowledge.create'),
+   "Write the first entry"
+   ) }}
+   {% endif %}
 </div>
 {% endif %}
 {% endblock %}

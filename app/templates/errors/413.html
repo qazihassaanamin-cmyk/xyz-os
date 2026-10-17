@@ -4,15 +4,15 @@
 
 {% block content %}
 <div class="panel" style="max-width: 620px;">
- <div class="panel-body">
- <h1>That file is too large</h1>
- <p class="muted">
-      Files must be {{ limit_mb }} MB or smaller. Compress the image, or attach a
-      link to the file instead of the file itself.
- </p>
- <div class="btn-row mt-6">
- <button type="button" class="btn btn-primary" onclick="history.back()">Go back and try again</button>
- </div>
- </div>
+     <div class="panel-body">
+          <h1>That file is too large</h1>
+          <p class="muted">
+               Files must be {{ limit_mb }} MB or smaller. Compress the image, or attach a
+               link to the file instead of the file itself.
+          </p>
+          <div class="btn-row mt-6">
+               <button type="button" class="btn btn-primary" onclick="history.back()">Go back and try again</button>
+          </div>
+     </div>
 </div>
 {% endblock %}

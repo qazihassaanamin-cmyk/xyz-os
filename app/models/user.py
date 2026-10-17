@@ -9,7 +9,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
-from app.models.base import StrEnum, TimestampMixin, utcnow
+from app.models.base import StrEnum, TimestampMixin, as_utc, utcnow
 
 
 class UserRole(StrEnum):
@@ -46,6 +46,11 @@ class User(TimestampMixin, UserMixin, db.Model):
     # Free-text professional biography and skills, editable by the member.
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The functions this member performs inside the company. Free text, set by
+    # the CEO, and shown on the profile alongside the official title. It is
+    # deliberately not an enum: the brief's responsibilities differ per
+    # founder and would otherwise need a new column per person.
+    functions: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Set when the CEO deactivates an account; sessions are rejected after this.
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     must_change_password: Mapped[bool] = mapped_column(
@@ -151,11 +156,12 @@ class Invitation(TimestampMixin, db.Model):
 
     @property
     def is_usable(self) -> bool:
+        expires = as_utc(self.expires_at)
         return (
             self.accepted_at is None
             and self.revoked_at is None
-            and self.expires_at is not None
-            and self.expires_at > utcnow()
+            and expires is not None
+            and expires > utcnow()
         )
 
 
@@ -177,4 +183,5 @@ class PasswordResetToken(TimestampMixin, db.Model):
 
     @property
     def is_usable(self) -> bool:
-        return self.used_at is None and self.expires_at is not None and self.expires_at > utcnow()
+        expires = as_utc(self.expires_at)
+        return self.used_at is None and expires is not None and expires > utcnow()

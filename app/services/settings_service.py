@@ -268,6 +268,15 @@ def apply_runtime_overrides(app) -> None:
     """
     try:
         with app.app_context():
+            from sqlalchemy import inspect as _sa_inspect
+
+            # A brand-new deployment runs this before ``flask db upgrade``. The
+            # table will not exist yet, and asking for a setting would raise on
+            # every boot until the schema is applied. Skip cleanly instead.
+            if "settings" not in _sa_inspect(db.engine).get_table_names():
+                log.info("Settings table not present yet; keeping file configuration.")
+                return
+
             app.config["COMPANY_TZ"] = get("company_tz", app.config.get("COMPANY_TZ"))
             app.config["COMPANY_NAME"] = get("company_name", app.config.get("COMPANY_NAME"))
             app.config["MAX_UPLOAD_MB"] = get_int("upload_max_mb", app.config.get("MAX_UPLOAD_MB", 5))
@@ -282,5 +291,5 @@ def apply_runtime_overrides(app) -> None:
             app.config["FOCUS_PAUSE_IDLE_LIMIT_SECONDS"] = (
                 get_int("focus_pause_limit_minutes", 30) * 60
             )
-    except Exception:  # pragma: no cover - settings table may not exist yet
-        log.debug("Settings overrides not applied; the table may not exist yet.")
+    except Exception:  # pragma: no cover - a broken database must not stop boot
+        log.warning("Stored settings could not be applied; using file configuration.", exc_info=True)

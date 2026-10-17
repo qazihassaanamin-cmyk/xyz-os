@@ -43,8 +43,13 @@ class BaseConfig:
     COMPANY_TZ = os.environ.get("COMPANY_TZ", "Asia/Karachi")
 
     # --- Database -------------------------------------------------------
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "instance", "tavryc.sqlite")
+    # Placeholder only. ``create_app`` calls ``resolve_database_uri()`` at boot
+    # so DATABASE_URL is read when the application is built, not when this
+    # module happens to be imported. That ordering matters for a WSGI host that
+    # loads .env inside its startup file and for the test suite, which points
+    # each test at a throwaway database.
+    SQLALCHEMY_DATABASE_URI = (
+        "sqlite:///" + os.path.join(BASE_DIR, "instance", "tavryc.sqlite")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -63,15 +68,22 @@ class BaseConfig:
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
 
     # --- CSRF -----------------------------------------------------------
+    # Every state-changing request carries a token, including fetch() calls, so
+    # a stolen cookie alone cannot move a task or post a message.
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # tied to the session instead of a hard clock
     WTF_CSRF_HEADERS = ["X-CSRFToken", "X-CSRF-Token"]
 
     # --- Uploads --------------------------------------------------------
-    UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
+    # UPLOAD_ROOT is the documented name (section O); UPLOAD_DIR is accepted so
+    # an older .env keeps working. Either may be relative to the repository root
+    # or absolute; it must never resolve inside app/static.
+    UPLOAD_DIR = os.environ.get("UPLOAD_ROOT") or os.environ.get("UPLOAD_DIR") or "uploads"
     MAX_UPLOAD_MB = _int("MAX_UPLOAD_MB", 10)
     MAX_FILES_PER_SUBMISSION = _int("MAX_FILES_PER_SUBMISSION", 5)
     MAX_CONTENT_LENGTH = _int("MAX_UPLOAD_MB", 10) * 1024 * 1024 * 12
+    PER_USER_UPLOAD_LIMIT_MB = _int("PER_USER_UPLOAD_LIMIT_MB", 60)
+    UPLOAD_RETENTION_DAYS = _int("UPLOAD_RETENTION_DAYS", 30)
 
     # --- Security headers ----------------------------------------------
     FORCE_HTTPS = _bool("FORCE_HTTPS", False)
@@ -140,6 +152,10 @@ class TestingConfig(BaseConfig):
     RATELIMIT_ENABLED = True
     RATELIMIT_STORAGE_URI = "memory://"
     FOCUS_MIN_SECONDS = 20 * 60
+    # The suite creates many accounts and verifies many logins; a real Argon2
+    # cost would make it slow for no security benefit, since the test database
+    # is throwaway.
+    FAST_PASSWORD_HASHING = True
 
 
 class ProductionConfig(BaseConfig):
@@ -152,16 +168,47 @@ class ProductionConfig(BaseConfig):
 
     @classmethod
     def validate(cls) -> None:
-        """Fail fast on an unsafe production configuration."""
+        """Fail fast on an unsafe production configuration.
+
+        The goal is that a misconfigured deploy stops at boot rather than
+        silently serving private company data over an insecure cookie.
+        """
         problems = []
-        if not os.environ.get("SECRET_KEY") or "change-me" in cls.SECRET_KEY:
-            problems.append("SECRET_KEY must be set to a strong unique value.")
-        if "sqlite" in cls.SQLALCHEMY_DATABASE_URI:
-            problems.append("DATABASE_URL should point at PostgreSQL in production.")
+        secret = os.environ.get("SECRET_KEY") or ""
+        if not secret or "change-me" in secret or len(secret) < 32:
+            problems.append("SECRET_KEY must be set to a strong unique value of at least 32 characters.")
+        if not os.environ.get("COOKIE_SECURE", "").strip():
+            problems.append("COOKIE_SECURE must be set explicitly in production.")
         if not _bool("COOKIE_SECURE", False):
             problems.append("COOKIE_SECURE must be true in production.")
         if problems:
             raise RuntimeError("Unsafe production configuration: " + " ".join(problems))
+
+
+def normalise_database_url(url: str) -> str:
+    """Accept the URL forms hosting providers hand out.
+
+    PythonAnywhere, Heroku and most managed providers still emit
+    ``postgres://`` or ``mysql://``. SQLAlchemy no longer recognises those
+    aliases, so they are rewritten to the driver-qualified form. No driver is
+    guessed beyond the default of the scheme.
+    """
+    url = (url or "").strip()
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://") :]
+    if url.startswith("mysql://"):
+        return "mysql+pymysql://" + url[len("mysql://") :]
+    return url
+
+
+def resolve_database_uri() -> str:
+    """The database URL for this process, read fresh from the environment."""
+    raw = os.environ.get("DATABASE_URL") or os.path.join(
+        BASE_DIR, "instance", "tavryc.sqlite"
+    )
+    if not raw.startswith(("sqlite", "postgres", "mysql")):
+        raw = "sqlite:///" + raw
+    return normalise_database_url(raw)
 
 
 CONFIG_MAP = {

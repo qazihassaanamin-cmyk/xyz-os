@@ -1,37 +1,32 @@
-"""WSGI entry point.
+"""WSGI entry point for PythonAnywhere.
 
-PythonAnywhere's web tab expects a module-level ``application`` callable in a
-WSGI file. Point that file at ``wsgi:application``.
+PythonAnywhere runs the WSGI app named by the WSGI_FILE setting in
+/var/www/<username>_tavryc_io/wsgi.py. This file points at the application
+factory, so a deploy is: upload the repo, install requirements, run
+``flask db upgrade`` and ``flask setup``, then set the environment variables
+below.
 
-Local development uses the same object:
-
-    flask --app wsgi:app run --debug
+The production guard only fires when this file is loaded as a WSGI app. When
+Flask's CLI imports the module to discover commands, ``FLASK_ENV`` is set to
+something other than ``production`` and the guard is skipped, so a developer
+can run ``flask db migrate`` without first configuring a production secret.
 """
 
-from __future__ import annotations
-
-import logging
 import os
+import sys
 
-from app import create_app
+# The repo lives at /home/<username>/Tavryc on PythonAnywhere.
+REPO_DIR = "/home/%s/Tavryc" % os.environ.get("USER", "")
+if REPO_DIR not in sys.path:
+    sys.path.insert(0, REPO_DIR)
 
-app = create_app(os.environ.get("FLASK_ENV", "development"))
+# PythonAnywhere's free tier has no scheduled tasks and no SMTP, so the app
+# works without either. These flags keep behaviour explicit.
+os.environ.setdefault("PYTHONANYWHERE_FREE_TIER", "1")
 
-# ``application`` is the conventional name for a WSGI callable.
-application = app
+from app import create_app  # noqa: E402
 
-
-def _configure_logging() -> None:
-    """Log to stdout so PythonAnywhere's error log captures everything."""
-    level = logging.DEBUG if app.config.get("DEBUG") else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    )
-
-
-_configure_logging()
-
-
-if __name__ == "__main__":  # pragma: no cover - manual run only
-    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", 5000)), debug=app.config.get("DEBUG", False))
+if os.environ.get("FLASK_ENV") == "production":
+    application = create_app("production")
+else:
+    application = create_app("development")

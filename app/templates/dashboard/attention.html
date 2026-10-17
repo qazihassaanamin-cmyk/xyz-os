@@ -5,220 +5,223 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('dashboard.ceo') }}">Command centre</a>
- <span aria-hidden="true">/</span>
- <span>{{ title }}</span>
+<a href="{{ url_for('dashboard.ceo') }}">Command centre</a>
+<span aria-hidden="true">/</span>
+<span>{{ title }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>{{ title }}</h1>
- <p class="subtitle">
+  <div>
+    <h1>{{ title }}</h1>
+    <p class="subtitle">
       Everything in this queue, with the same links as the command centre summary.
     </p>
- </div>
- <div class="page-actions">
- <a class="btn btn-ghost" href="{{ url_for('dashboard.ceo') }}">Back to the command centre</a>
- </div>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-ghost" href="{{ url_for('dashboard.ceo') }}">Back to the command centre</a>
+  </div>
 </div>
 
 {% if kind == 'checkins' %}
-  {% if users %}
+{% if users %}
 <div class="table-wrap">
- <table class="data">
- <caption>Members on a working day who have not submitted a check-in today.</caption>
- <thead>
- <tr>
- <th scope="col">Member</th>
- <th scope="col">Official role</th>
- <th scope="col">Open tasks</th>
- <th scope="col"><span class="visually-hidden">Action</span></th>
- </tr>
- </thead>
- <tbody>
-        {% for user in users %}
- <tr>
- <td>
- <a class="person" href="{{ url_for('team.profile', username=user.username) }}">
- <span class="avatar avatar-sm {{ user.username }}">{{ user.initials }}</span>
- <span class="name strong">{{ user.display_name }}</span>
- </a>
- </td>
- <td>{{ user.official_title }}</td>
- <td class="num">
- <a href="{{ url_for('tasks.index', view='team', assignee=user.id) }}">Open tasks</a>
- </td>
- <td class="nowrap">
- <a class="btn btn-sm" href="{{ url_for('team.profile', username=user.username) }}">Profile</a>
- </td>
- </tr>
-        {% endfor %}
- </tbody>
- </table>
+  <table class="data">
+    <caption>Members on a working day who have not submitted a check-in today.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Member</th>
+        <th scope="col">Official role</th>
+        <th scope="col">Open tasks</th>
+        <th scope="col"><span class="visually-hidden">Action</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>
+          <a class="person" href="{{ url_for('team.profile', username=user.username) }}">
+            <span class="avatar avatar-sm {{ user.username }}">{{ user.initials }}</span>
+            <span class="name strong">{{ user.display_name }}</span>
+          </a>
+        </td>
+        <td>{{ user.official_title }}</td>
+        <td class="num">
+          <a href="{{ url_for('tasks.index', view='team', assignee=user.id) }}">Open tasks</a>
+        </td>
+        <td class="nowrap">
+          <a class="btn btn-sm" href="{{ url_for('team.profile', username=user.username) }}">Profile</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-  {% else %}
+{% else %}
 <div class="panel">
-      {{ empty_state("Everyone has checked in", "Every active member on a working day has submitted a check-in today.") }}
+  {{ empty_state("Everyone has checked in", "Every active member on a working day has submitted a check-in today.") }}
 </div>
-  {% endif %}
+{% endif %}
 
 {% elif kind == 'review' %}
-  {% if items %}
+{% if items %}
 <div class="table-wrap">
- <table class="data">
- <caption>Submissions awaiting a decision, oldest first.</caption>
- <thead>
- <tr>
- <th scope="col">Task</th>
- <th scope="col">Submitted by</th>
- <th scope="col">Reviewer</th>
- <th scope="col">Waiting</th>
- <th scope="col"><span class="visually-hidden">Action</span></th>
- </tr>
- </thead>
- <tbody>
-        {% for submission in items %}
- <tr>
- <td>
+  <table class="data">
+    <caption>Submissions awaiting a decision, oldest first.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Task</th>
+        <th scope="col">Submitted by</th>
+        <th scope="col">Reviewer</th>
+        <th scope="col">Waiting</th>
+        <th scope="col"><span class="visually-hidden">Action</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for submission in items %}
+      <tr>
+        <td>
           {% if submission.task %}
- <a class="strong" href="{{ url_for('tasks.detail', task_id=submission.task.id) }}">{{ submission.task.title }}</a>
+          <a class="strong" href="{{ url_for('tasks.detail', task_id=submission.task.id) }}">{{ submission.task.title
+            }}</a>
           {% else %}<span class="dim">Task removed</span>{% endif %}
- </td>
- <td class="nowrap">{{ submission.submitted_by.display_name if submission.submitted_by else "—" }}</td>
- <td class="nowrap">
+        </td>
+        <td class="nowrap">{{ submission.submitted_by.display_name if submission.submitted_by else "—" }}</td>
+        <td class="nowrap">
           {% if submission.task and submission.task.reviewer %}
-            {{ submission.task.reviewer.display_name }}
+          {{ submission.task.reviewer.display_name }}
           {% else %}
- <span class="tone-attention">Unassigned</span>
+          <span class="tone-attention">Unassigned</span>
           {% endif %}
- </td>
- <td class="nowrap small muted">{{ submission.created_at|relative }}</td>
- <td class="nowrap">
+        </td>
+        <td class="nowrap small muted">{{ submission.created_at|relative }}</td>
+        <td class="nowrap">
           {% if submission.task %}
- <a class="btn btn-sm" href="{{ url_for('tasks.detail', task_id=submission.task.id) }}#submissions">Review</a>
+          <a class="btn btn-sm" href="{{ url_for('tasks.detail', task_id=submission.task.id) }}#submissions">Review</a>
           {% endif %}
- </td>
- </tr>
-        {% endfor %}
- </tbody>
- </table>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-  {% else %}
+{% else %}
 <div class="panel">{{ empty_state("Nothing is waiting for review", "Every submission has had a decision.") }}</div>
-  {% endif %}
+{% endif %}
 
 {% elif kind == 'blockers' %}
-  {% if items %}
+{% if items %}
 <div class="table-wrap">
- <table class="data">
- <caption>Blockers that are stopping work.</caption>
- <thead>
- <tr>
- <th scope="col">Blocker</th>
- <th scope="col">Raised by</th>
- <th scope="col">Task</th>
- <th scope="col">Age</th>
- <th scope="col">Status</th>
- </tr>
- </thead>
- <tbody>
-        {% for blocker in items %}
- <tr>
- <td>{{ blocker.description|truncate(120) }}</td>
- <td class="nowrap">{{ blocker.raised_by.display_name if blocker.raised_by else "—" }}</td>
- <td class="nowrap">
+  <table class="data">
+    <caption>Blockers that are stopping work.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Blocker</th>
+        <th scope="col">Raised by</th>
+        <th scope="col">Task</th>
+        <th scope="col">Age</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for blocker in items %}
+      <tr>
+        <td>{{ blocker.description|truncate(120) }}</td>
+        <td class="nowrap">{{ blocker.raised_by.display_name if blocker.raised_by else "—" }}</td>
+        <td class="nowrap">
           {% if blocker.task %}
- <a href="{{ url_for('tasks.detail', task_id=blocker.task.id) }}">{{ blocker.task.title|truncate(40) }}</a>
+          <a href="{{ url_for('tasks.detail', task_id=blocker.task.id) }}">{{ blocker.task.title|truncate(40) }}</a>
           {% else %}<span class="dim">—</span>{% endif %}
- </td>
- <td class="nowrap small muted">{{ blocker.created_at|relative }}</td>
- <td class="nowrap">{{ status_pill(blocker.status) }}</td>
- </tr>
-        {% endfor %}
- </tbody>
- </table>
+        </td>
+        <td class="nowrap small muted">{{ blocker.created_at|relative }}</td>
+        <td class="nowrap">{{ status_pill(blocker.status) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-  {% else %}
+{% else %}
 <div class="panel">{{ empty_state("No open blockers", "Nothing is currently stopping work.") }}</div>
-  {% endif %}
+{% endif %}
 
 {% elif kind == 'milestones' %}
-  {% if items %}
+{% if items %}
 <div class="table-wrap">
- <table class="data">
- <caption>Milestones past their committed date.</caption>
- <thead>
- <tr>
- <th scope="col">Milestone</th>
- <th scope="col">Project</th>
- <th scope="col">Was due</th>
- <th scope="col">Status</th>
- </tr>
- </thead>
- <tbody>
-        {% for milestone in items %}
- <tr>
- <td><a class="strong" href="{{ url_for('projects.detail', project_id=milestone.project_id) }}#milestones">{{ milestone.title }}</a></td>
- <td class="nowrap">{{ milestone.project.name }}</td>
- <td class="nowrap"><span class="due-overdue">{{ milestone.due_date|localdate }}</span></td>
- <td class="nowrap">{{ status_pill(milestone.status) }}</td>
- </tr>
-        {% endfor %}
- </tbody>
- </table>
+  <table class="data">
+    <caption>Milestones past their committed date.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Milestone</th>
+        <th scope="col">Project</th>
+        <th scope="col">Was due</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for milestone in items %}
+      <tr>
+        <td><a class="strong" href="{{ url_for('projects.detail', project_id=milestone.project_id) }}#milestones">{{
+            milestone.title }}</a></td>
+        <td class="nowrap">{{ milestone.project.name }}</td>
+        <td class="nowrap"><span class="due-overdue">{{ milestone.due_date|localdate }}</span></td>
+        <td class="nowrap">{{ status_pill(milestone.status) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-  {% else %}
-<div class="panel">{{ empty_state("No milestones are overdue", "Every committed milestone is either complete or still within its date.") }}</div>
-  {% endif %}
+{% else %}
+<div class="panel">{{ empty_state("No milestones are overdue", "Every committed milestone is either complete or still
+  within its date.") }}</div>
+{% endif %}
 
 {% else %}
-  {% if items %}
+{% if items %}
 <div class="table-wrap">
- <table class="data">
- <caption>Open work past its deadline, oldest first.</caption>
- <thead>
- <tr>
- <th scope="col">Task</th>
- <th scope="col">Owner</th>
- <th scope="col">Project</th>
- <th scope="col">Deadline</th>
- <th scope="col">Priority</th>
- </tr>
- </thead>
- <tbody>
-        {% for task in items %}
- <tr>
- <td><a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a></td>
- <td class="nowrap">
+  <table class="data">
+    <caption>Open work past its deadline, oldest first.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Task</th>
+        <th scope="col">Owner</th>
+        <th scope="col">Project</th>
+        <th scope="col">Deadline</th>
+        <th scope="col">Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in items %}
+      <tr>
+        <td><a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a></td>
+        <td class="nowrap">
           {% if task.assignee %}
- <a href="{{ url_for('team.profile', username=task.assignee.username) }}">{{ task.assignee.display_name }}</a>
+          <a href="{{ url_for('team.profile', username=task.assignee.username) }}">{{ task.assignee.display_name }}</a>
           {% else %}<span class="dim">Unassigned</span>{% endif %}
- </td>
- <td class="nowrap">
+        </td>
+        <td class="nowrap">
           {% if task.project %}{{ task.project.name }}{% else %}<span class="dim">—</span>{% endif %}
- </td>
- <td class="nowrap">{{ due_mark(task) }}</td>
- <td class="nowrap">{{ priority_mark(task.priority) }}</td>
- </tr>
-        {% endfor %}
- </tbody>
- </table>
+        </td>
+        <td class="nowrap">{{ due_mark(task) }}</td>
+        <td class="nowrap">{{ priority_mark(task.priority) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-  {% else %}
+{% else %}
 <div class="panel">{{ empty_state("Nothing is overdue", "Every open task is within its deadline.") }}</div>
-  {% endif %}
+{% endif %}
 {% endif %}
 
 {% if pagination and pagination.pages > 1 %}
 <nav class="pagination" aria-label="Queue pages">
- <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+  <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
   {% if pagination.has_prev %}
- <a href="{{ url_for('dashboard.attention', kind=kind, page=pagination.prev_num) }}">Previous</a>
+  <a href="{{ url_for('dashboard.attention', kind=kind, page=pagination.prev_num) }}">Previous</a>
   {% endif %}
- <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+  <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
   {% if pagination.has_next %}
- <a href="{{ url_for('dashboard.attention', kind=kind, page=pagination.next_num) }}">Next</a>
+  <a href="{{ url_for('dashboard.attention', kind=kind, page=pagination.next_num) }}">Next</a>
   {% endif %}
 </nav>
 {% endif %}

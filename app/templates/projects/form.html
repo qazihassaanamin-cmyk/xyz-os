@@ -3,123 +3,132 @@
 {% block title %}{{ "Edit project" if project else "New project" }}{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('projects.index') }}">Projects</a>
- <span aria-hidden="true">/</span>
- <span>{{ "Edit" if project else "New" }}</span>
+<a href="{{ url_for('projects.index') }}">Projects</a>
+<span aria-hidden="true">/</span>
+<span>{{ "Edit" if project else "New" }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>{{ "Edit project" if project else "New project" }}</h1>
- <p class="subtitle">
-      Projects hold the work, the milestones and the evidence. Objectives are worth
-      writing down — they are what the company is judged on later.
- </p>
- </div>
+     <div>
+          <h1>{{ "Edit project" if project else "New project" }}</h1>
+          <p class="subtitle">
+               Projects hold the work, the milestones and the evidence. Objectives are worth
+               writing down — they are what the company is judged on later.
+          </p>
+     </div>
 </div>
 
 <form method="post" class="workspace"
-      action="{{ url_for('projects.edit', project_id=project.id) if project else url_for('projects.create') }}">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+     action="{{ url_for('projects.edit', project_id=project.id) if project else url_for('projects.create') }}">
+     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
- <div>
- <section class="panel">
- <div class="panel-head"><h2>The project</h2></div>
- <div class="panel-body">
- <div class="field">
- <label for="name">Name <span class="tone-critical" aria-hidden="true">*</span></label>
- <input id="name" name="name" type="text" required minlength="2" maxlength="160"
-                 value="{{ project.name if project else '' }}" placeholder="Raasta">
- </div>
+     <div>
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>The project</h2>
+               </div>
+               <div class="panel-body">
+                    <div class="field">
+                         <label for="name">Name <span class="tone-critical" aria-hidden="true">*</span></label>
+                         <input id="name" name="name" type="text" required minlength="2" maxlength="160"
+                              value="{{ project.name if project else '' }}" placeholder="Raasta">
+                    </div>
 
- <div class="field">
- <label for="description">Description</label>
- <textarea id="description" name="description" rows="3"
-                  placeholder="What this project is, in a sentence or two.">{{ project.description or '' if project else '' }}</textarea>
- </div>
+                    <div class="field">
+                         <label for="description">Description</label>
+                         <textarea id="description" name="description" rows="3"
+                              placeholder="What this project is, in a sentence or two.">{{ project.description or '' if project else '' }}</textarea>
+                    </div>
 
- <div class="field">
- <label for="objectives">Objectives</label>
- <textarea id="objectives" name="objectives" rows="6"
-                  placeholder="What the company intends to achieve. Plain text; line breaks are preserved.">{{ project.objectives or '' if project else '' }}</textarea>
- <p class="field-hint">Recorded once so the project can be judged against it later.</p>
- </div>
- </div>
- </section>
- </div>
+                    <div class="field">
+                         <label for="objectives">Objectives</label>
+                         <textarea id="objectives" name="objectives" rows="6"
+                              placeholder="What the company intends to achieve. Plain text; line breaks are preserved.">{{ project.objectives or '' if project else '' }}</textarea>
+                         <p class="field-hint">Recorded once so the project can be judged against it later.</p>
+                    </div>
+               </div>
+          </section>
+     </div>
 
- <aside class="rail">
- <section class="panel">
- <div class="panel-head"><h2>Status and dates</h2></div>
- <div class="panel-body">
- <div class="field">
- <label for="status">Status</label>
- <select id="status" name="status">
-            {% for value in statuses %}
- <option value="{{ value }}"
-              {% if (project and project.status == value) or (not project and value == 'PLANNING') %}selected{% endif %}>
-              {{ value|title }}
- </option>
-            {% endfor %}
- </select>
- </div>
+     <aside class="rail">
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Status and dates</h2>
+               </div>
+               <div class="panel-body">
+                    <div class="field">
+                         <label for="status">Status</label>
+                         <select id="status" name="status">
+                              {% for value in statuses %}
+                              <option value="{{ value }}" {% if (project and project.status==value) or (not project and
+                                   value=='PLANNING' ) %}selected{% endif %}>
+                                   {{ value|title }}
+                              </option>
+                              {% endfor %}
+                         </select>
+                    </div>
 
- <div class="field">
- <label for="owner_id">Owner</label>
- <select id="owner_id" name="owner_id">
-            {% for member in members %}
- <option value="{{ member.id }}"
-              {% if (project and project.owner_id == member.id) or (not project and member.id == current_user.id) %}selected{% endif %}>
-              {{ member.display_name }}
- </option>
-            {% endfor %}
- </select>
- <p class="field-hint">The owner holds the lead role on this project.</p>
- </div>
+                    <div class="field">
+                         <label for="owner_id">Owner</label>
+                         <select id="owner_id" name="owner_id">
+                              {% for member in members %}
+                              <option value="{{ member.id }}" {% if (project and project.owner_id==member.id) or (not
+                                   project and member.id==current_user.id) %}selected{% endif %}>
+                                   {{ member.display_name }}
+                              </option>
+                              {% endfor %}
+                         </select>
+                         <p class="field-hint">The owner holds the lead role on this project.</p>
+                    </div>
 
- <div class="field">
- <label for="start_date">Start date</label>
- <input id="start_date" name="start_date" type="date"
-                 value="{{ project.start_date.isoformat() if project and project.start_date else '' }}">
- </div>
+                    <div class="field">
+                         <label for="start_date">Start date</label>
+                         <input id="start_date" name="start_date" type="date"
+                              value="{{ project.start_date.isoformat() if project and project.start_date else '' }}">
+                    </div>
 
- <div class="field">
- <label for="target_date">Target date</label>
- <input id="target_date" name="target_date" type="date"
-                 value="{{ project.target_date.isoformat() if project and project.target_date else '' }}">
- </div>
- </div>
+                    <div class="field">
+                         <label for="target_date">Target date</label>
+                         <input id="target_date" name="target_date" type="date"
+                              value="{{ project.target_date.isoformat() if project and project.target_date else '' }}">
+                    </div>
+               </div>
 
- <div class="panel-foot">
- <div class="btn-row">
- <button type="submit" class="btn btn-primary">{{ "Save changes" if project else "Create project" }}</button>
- <a class="btn btn-ghost" href="{{ url_for('projects.detail', project_id=project.id) if project else url_for('projects.index') }}">Cancel</a>
- </div>
- </div>
- </section>
+               <div class="panel-foot">
+                    <div class="btn-row">
+                         <button type="submit" class="btn btn-primary">{{ "Save changes" if project else "Create
+                              project" }}</button>
+                         <a class="btn btn-ghost"
+                              href="{{ url_for('projects.detail', project_id=project.id) if project else url_for('projects.index') }}">Cancel</a>
+                    </div>
+               </div>
+          </section>
 
-  {% if not project %}
- <section class="panel">
- <div class="panel-head"><h2>Initial members</h2></div>
- <div class="panel-body">
- <p class="field-hint mb-4">
-        You are added as the lead automatically. Select anyone else who should be
-        able to see and work on this project.
- </p>
- <ul class="stack-2" style="list-style:none;padding:0;margin:0;">
-          {% for member in members %}
-            {% if member.id != current_user.id %}
- <li class="checkbox-line">
- <input type="checkbox" id="member-{{ member.id }}" name="member_ids" value="{{ member.id }}">
- <label for="member-{{ member.id }}">{{ member.display_name }}</label>
- </li>
-            {% endif %}
-          {% endfor %}
- </ul>
- </div>
- </section>
-  {% endif %}
- </aside>
+          {% if not project %}
+          <section class="panel">
+               <div class="panel-head">
+                    <h2>Initial members</h2>
+               </div>
+               <div class="panel-body">
+                    <p class="field-hint mb-4">
+                         You are added as the lead automatically. Select anyone else who should be
+                         able to see and work on this project.
+                    </p>
+                    <ul class="stack-2" style="list-style:none;padding:0;margin:0;">
+                         {% for member in members %}
+                         {% if member.id != current_user.id %}
+                         <li class="checkbox-line">
+                              <input type="checkbox" id="member-{{ member.id }}" name="member_ids"
+                                   value="{{ member.id }}">
+                              <label for="member-{{ member.id }}">{{ member.display_name }}</label>
+                         </li>
+                         {% endif %}
+                         {% endfor %}
+                    </ul>
+               </div>
+          </section>
+          {% endif %}
+     </aside>
 </form>
 {% endblock %}

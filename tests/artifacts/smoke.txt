@@ -1,0 +1,608 @@
+EEEEEEEEEEE                                                              [100%]
+=================================== ERRORS ====================================
+__________ ERROR at setup of TestLogin.test_valid_login_by_username ___________
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+____________ ERROR at setup of TestLogin.test_valid_login_by_email ____________
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+___ ERROR at setup of TestLogin.test_wrong_password_is_rejected_generically ___
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+____ ERROR at setup of TestLogin.test_unknown_user_gives_the_same_message _____
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+_________ ERROR at setup of TestLogin.test_failed_attempt_is_recorded _________
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+______ ERROR at setup of TestLogin.test_deactivated_user_cannot_sign_in _______
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+______ ERROR at setup of TestLogin.test_lockout_after_repeated_failures _______
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+_ ERROR at setup of TestLogin.test_login_page_is_the_first_thing_an_anonymous_visitor_sees _
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+__ ERROR at setup of TestLogin.test_login_page_renders_with_the_company_name __
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+______ ERROR at setup of TestLogin.test_login_form_carries_a_csrf_token _______
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+_______ ERROR at setup of TestLogin.test_login_without_csrf_is_refused ________
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: settings
+
+The above exception was the direct cause of the following exception:
+.venv\Lib\site-packages\pytest_flask\plugin.py:124: in _configure_application
+    app = getfixturevalue(request, "app")
+.venv\Lib\site-packages\pytest_flask\pytest_compat.py:3: in getfixturevalue
+    return request.getfixturevalue(value)
+tests\conftest.py:72: in app
+    _seed_reference_data()
+tests\conftest.py:109: in _seed_reference_data
+    settings_service.ensure_defaults()
+app\services\settings_service.py:198: in ensure_defaults
+    if Setting.query.filter_by(key=spec["key"]).first() is not None:
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+.venv\Lib\site-packages\sqlalchemy\orm\query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2362: in execute
+    return self._execute_internal(
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv\Lib\site-packages\sqlalchemy\orm\context.py:305: in orm_execute_statement
+    result = conn.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1418: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: settings
+E   [SQL: SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.value_type AS settings_value_type, settings.label AS settings_label, settings.description AS settings_description, settings.category AS settings_category, settings.is_secret AS settings_is_secret, settings.created_at AS settings_created_at, settings.updated_at AS settings_updated_at 
+E   FROM settings 
+E   WHERE settings."key" = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: ('company_name', 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+=========================== short test summary info ===========================
+ERROR tests/test_auth.py::TestLogin::test_valid_login_by_username - sqlalchem...
+ERROR tests/test_auth.py::TestLogin::test_valid_login_by_email - sqlalchemy.e...
+ERROR tests/test_auth.py::TestLogin::test_wrong_password_is_rejected_generically
+ERROR tests/test_auth.py::TestLogin::test_unknown_user_gives_the_same_message
+ERROR tests/test_auth.py::TestLogin::test_failed_attempt_is_recorded - sqlalc...
+ERROR tests/test_auth.py::TestLogin::test_deactivated_user_cannot_sign_in - s...
+ERROR tests/test_auth.py::TestLogin::test_lockout_after_repeated_failures - s...
+ERROR tests/test_auth.py::TestLogin::test_login_page_is_the_first_thing_an_anonymous_visitor_sees
+ERROR tests/test_auth.py::TestLogin::test_login_page_renders_with_the_company_name
+ERROR tests/test_auth.py::TestLogin::test_login_form_carries_a_csrf_token - s...
+ERROR tests/test_auth.py::TestLogin::test_login_without_csrf_is_refused - sql...

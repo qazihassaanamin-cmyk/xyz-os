@@ -4,182 +4,183 @@
 {% block title %}My daily record{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('daily.index') }}">Daily check-in</a>
- <span aria-hidden="true">/</span>
- <span>History</span>
+<a href="{{ url_for('daily.index') }}">Daily check-in</a>
+<span aria-hidden="true">/</span>
+<span>History</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>My daily record</h1>
- <p class="subtitle">
+  <div>
+    <h1>My daily record</h1>
+    <p class="subtitle">
       Every check-in and report you have submitted. Nothing here has been altered —
       where a report was edited, the previous version is kept alongside it.
- </p>
- </div>
- <div class="page-actions">
- <a class="btn btn-primary" href="{{ url_for('daily.index') }}">Today's record</a>
- </div>
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="{{ url_for('daily.index') }}">Today's record</a>
+  </div>
 </div>
 
 <div class="grid-2">
- <section class="panel">
- <div class="panel-head">
- <h2>Check-ins</h2>
- <span class="count">{{ checkins.total }}</span>
- </div>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Check-ins</h2>
+      <span class="count">{{ checkins.total }}</span>
+    </div>
     {% if checkins.items %}
- <ul class="list">
-        {% for row in checkins.items %}
- <li>
- <details>
- <summary class="list-row" style="cursor:pointer;">
- <span class="grow">
- <span class="title">{{ row.workday_date|localdate("%A, %d %B %Y") }}</span>
- <span class="meta">
+    <ul class="list">
+      {% for row in checkins.items %}
+      <li>
+        <details>
+          <summary class="list-row" style="cursor:pointer;">
+            <span class="grow">
+              <span class="title">{{ row.workday_date|localdate("%A, %d %B %Y") }}</span>
+              <span class="meta">
                 <span>Submitted {{ row.created_at|relative }}</span>
                 {% if row.support_needed %}<span>Asked for support</span>{% endif %}
                 {% if row.blockers %}<span class="tone-attention">Flagged a blocker</span>{% endif %}
               </span>
- </span>
- </summary>
- <div style="padding: 0 var(--space-4) var(--space-4);">
- <dl class="facts">
- <div class="fact">
- <dt>Priorities</dt>
- <dd>{{ row.priorities }}</dd>
- </div>
-                {% if row.intended_result %}
- <div class="fact">
- <dt>Intended result</dt>
- <dd>{{ row.intended_result }}</dd>
- </div>
-                {% endif %}
-                {% if row.support_needed %}
- <div class="fact">
- <dt>Support needed</dt>
- <dd>{{ row.support_needed }}</dd>
- </div>
-                {% endif %}
-                {% if row.blockers %}
- <div class="fact">
- <dt>Blockers raised</dt>
- <dd>{{ row.blockers }}</dd>
- </div>
-                {% endif %}
- </dl>
- </div>
- </details>
- </li>
-        {% endfor %}
- </ul>
+            </span>
+          </summary>
+          <div style="padding: 0 var(--space-4) var(--space-4);">
+            <dl class="facts">
+              <div class="fact">
+                <dt>Priorities</dt>
+                <dd>{{ row.priorities }}</dd>
+              </div>
+              {% if row.intended_result %}
+              <div class="fact">
+                <dt>Intended result</dt>
+                <dd>{{ row.intended_result }}</dd>
+              </div>
+              {% endif %}
+              {% if row.support_needed %}
+              <div class="fact">
+                <dt>Support needed</dt>
+                <dd>{{ row.support_needed }}</dd>
+              </div>
+              {% endif %}
+              {% if row.blockers %}
+              <div class="fact">
+                <dt>Blockers raised</dt>
+                <dd>{{ row.blockers }}</dd>
+              </div>
+              {% endif %}
+            </dl>
+          </div>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
 
-      {% if checkins.pages > 1 %}
- <div class="panel-foot">
- <nav class="pagination" aria-label="Check-in pages">
- <span class="summary">{{ checkins.first_index }}–{{ checkins.last_index }} of {{ checkins.total }}</span>
-            {% if checkins.has_prev %}<a href="{{ url_for('daily.history', page=checkins.prev_num) }}">Previous</a>{% endif %}
- <span class="page" aria-current="page">{{ checkins.page }} / {{ checkins.pages }}</span>
-            {% if checkins.has_next %}<a href="{{ url_for('daily.history', page=checkins.next_num) }}">Next</a>{% endif %}
- </nav>
- </div>
-      {% endif %}
+    {% if checkins.pages > 1 %}
+    <div class="panel-foot">
+      <nav class="pagination" aria-label="Check-in pages">
+        <span class="summary">{{ checkins.first_index }}–{{ checkins.last_index }} of {{ checkins.total }}</span>
+        {% if checkins.has_prev %}<a href="{{ url_for('daily.history', page=checkins.prev_num) }}">Previous</a>{% endif
+        %}
+        <span class="page" aria-current="page">{{ checkins.page }} / {{ checkins.pages }}</span>
+        {% if checkins.has_next %}<a href="{{ url_for('daily.history', page=checkins.next_num) }}">Next</a>{% endif %}
+      </nav>
+    </div>
+    {% endif %}
 
     {% else %}
-      {{ empty_state("No check-ins recorded", "Submit your first check-in from today's record.") }}
+    {{ empty_state("No check-ins recorded", "Submit your first check-in from today's record.") }}
     {% endif %}
- </section>
+  </section>
 
- <section class="panel">
- <div class="panel-head">
- <h2>End-of-day reports</h2>
- <span class="count">{{ reports.total }}</span>
- </div>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>End-of-day reports</h2>
+      <span class="count">{{ reports.total }}</span>
+    </div>
     {% if reports.items %}
- <ul class="list">
-        {% for row in reports.items %}
- <li>
- <details>
- <summary class="list-row" style="cursor:pointer;">
- <span class="grow">
- <span class="title">{{ row.workday_date|localdate("%A, %d %B %Y") }}</span>
- <span class="meta">
+    <ul class="list">
+      {% for row in reports.items %}
+      <li>
+        <details>
+          <summary class="list-row" style="cursor:pointer;">
+            <span class="grow">
+              <span class="title">{{ row.workday_date|localdate("%A, %d %B %Y") }}</span>
+              <span class="meta">
                 <span>Submitted {{ row.created_at|relative }}</span>
                 {% if row.revision_count %}
- <span class="tone-attention">Edited {{ row.revision_count }}×</span>
+                <span class="tone-attention">Edited {{ row.revision_count }}×</span>
                 {% endif %}
                 {% if row.unfinished %}<span>Had unfinished work</span>{% endif %}
               </span>
- </span>
- </summary>
- <div style="padding: 0 var(--space-4) var(--space-4);">
- <dl class="facts">
- <div class="fact">
- <dt>Accomplished</dt>
- <dd>{{ row.accomplished }}</dd>
- </div>
-                {% if row.submitted_summary %}
- <div class="fact">
- <dt>Submitted</dt>
- <dd>{{ row.submitted_summary }}</dd>
- </div>
-                {% endif %}
-                {% if row.unfinished %}
- <div class="fact">
- <dt>Unfinished</dt>
- <dd>{{ row.unfinished }}</dd>
- </div>
-                {% endif %}
-                {% if row.unfinished_reason %}
- <div class="fact">
- <dt>Why</dt>
- <dd>{{ row.unfinished_reason }}</dd>
- </div>
-                {% endif %}
-                {% if row.next_steps %}
- <div class="fact">
- <dt>Next steps</dt>
- <dd>{{ row.next_steps }}</dd>
- </div>
-                {% endif %}
- </dl>
-
-              {% if row.revisions %}
- <details class="mt-4">
- <summary class="small" style="cursor:pointer;">
-                  {{ row.revisions|length }} previous version{{ "s" if row.revisions|length != 1 else "" }}
- </summary>
- <div class="stack-3 mt-2">
-                  {% for revision in row.revisions %}
- <div class="notice">
- <p class="tiny dim mb-2">As it stood before {{ revision.edited_at|localdatetime }}</p>
- <p class="small mb-0">{{ revision.snapshot.get("accomplished", "") }}</p>
- </div>
-                  {% endfor %}
- </div>
- </details>
+            </span>
+          </summary>
+          <div style="padding: 0 var(--space-4) var(--space-4);">
+            <dl class="facts">
+              <div class="fact">
+                <dt>Accomplished</dt>
+                <dd>{{ row.accomplished }}</dd>
+              </div>
+              {% if row.submitted_summary %}
+              <div class="fact">
+                <dt>Submitted</dt>
+                <dd>{{ row.submitted_summary }}</dd>
+              </div>
               {% endif %}
- </div>
- </details>
- </li>
-        {% endfor %}
- </ul>
+              {% if row.unfinished %}
+              <div class="fact">
+                <dt>Unfinished</dt>
+                <dd>{{ row.unfinished }}</dd>
+              </div>
+              {% endif %}
+              {% if row.unfinished_reason %}
+              <div class="fact">
+                <dt>Why</dt>
+                <dd>{{ row.unfinished_reason }}</dd>
+              </div>
+              {% endif %}
+              {% if row.next_steps %}
+              <div class="fact">
+                <dt>Next steps</dt>
+                <dd>{{ row.next_steps }}</dd>
+              </div>
+              {% endif %}
+            </dl>
 
-      {% if reports.pages > 1 %}
- <div class="panel-foot">
- <nav class="pagination" aria-label="Report pages">
- <span class="summary">{{ reports.first_index }}–{{ reports.last_index }} of {{ reports.total }}</span>
-            {% if reports.has_prev %}<a href="{{ url_for('daily.history', page=reports.prev_num) }}">Previous</a>{% endif %}
- <span class="page" aria-current="page">{{ reports.page }} / {{ reports.pages }}</span>
-            {% if reports.has_next %}<a href="{{ url_for('daily.history', page=reports.next_num) }}">Next</a>{% endif %}
- </nav>
- </div>
-      {% endif %}
+            {% if row.revisions %}
+            <details class="mt-4">
+              <summary class="small" style="cursor:pointer;">
+                {{ row.revisions|length }} previous version{{ "s" if row.revisions|length != 1 else "" }}
+              </summary>
+              <div class="stack-3 mt-2">
+                {% for revision in row.revisions %}
+                <div class="notice">
+                  <p class="tiny dim mb-2">As it stood before {{ revision.edited_at|localdatetime }}</p>
+                  <p class="small mb-0">{{ revision.snapshot.get("accomplished", "") }}</p>
+                </div>
+                {% endfor %}
+              </div>
+            </details>
+            {% endif %}
+          </div>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
+
+    {% if reports.pages > 1 %}
+    <div class="panel-foot">
+      <nav class="pagination" aria-label="Report pages">
+        <span class="summary">{{ reports.first_index }}–{{ reports.last_index }} of {{ reports.total }}</span>
+        {% if reports.has_prev %}<a href="{{ url_for('daily.history', page=reports.prev_num) }}">Previous</a>{% endif %}
+        <span class="page" aria-current="page">{{ reports.page }} / {{ reports.pages }}</span>
+        {% if reports.has_next %}<a href="{{ url_for('daily.history', page=reports.next_num) }}">Next</a>{% endif %}
+      </nav>
+    </div>
+    {% endif %}
 
     {% else %}
-      {{ empty_state("No reports recorded", "Submit your first end-of-day report from today's record.") }}
+    {{ empty_state("No reports recorded", "Submit your first end-of-day report from today's record.") }}
     {% endif %}
- </section>
+  </section>
 </div>
 {% endblock %}

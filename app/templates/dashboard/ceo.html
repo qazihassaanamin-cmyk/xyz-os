@@ -3,7 +3,7 @@
 {% from "partials/_empty_state.html" import empty_state %}
 
 {% block title %}Command centre{% endblock %}
-{% block content_class %}content{% endblock %}
+{% block content_class %}content centered{% endblock %}
 
 {% block breadcrumb %}
  <span>Command centre</span>
@@ -394,37 +394,13 @@
  </div>
  </section>
 
-    {# --- Recent activity --- #}
- <section class="panel">
- <div class="panel-head">
- <h2>Recent activity</h2>
- <a class="tiny" href="{{ url_for('ceo.activity') }}">Full log</a>
- </div>
-      {% if activity %}
- <ul class="timeline" style="padding: var(--space-4);">
-          {% for entry in activity %}
- <li>
- <p class="what">{{ entry.action_label }}</p>
- <p class="detail">
-              {% if entry.user %}{{ entry.user.display_name }} · {% endif %}
-              {{ entry.summary or "" }}
- </p>
- <p class="when">{{ entry.created_at|relative }}</p>
- </li>
-          {% endfor %}
- </ul>
-      {% else %}
-        {{ empty_state("No activity recorded yet", "Task changes, reviews, account changes and configuration edits are all recorded here.") }}
-      {% endif %}
- </section>
-
-    {# --- Storage, only when it is meaningful --- #}
+{# --- Storage, only when it is meaningful --- #}
     {% if storage %}
- <section class="panel">
- <div class="panel-head">
- <h2>Storage</h2>
- <a class="tiny" href="{{ url_for('uploads.storage') }}">Manage files</a>
- </div>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Storage</h2>
+      <a class="tiny" href="{{ url_for('uploads.storage') }}">Manage files</a>
+    </div>
  <div class="panel-body">
  <div class="progress-row">
  <span>{{ (storage.total_bytes / 1048576)|round(1) }} MB used</span>

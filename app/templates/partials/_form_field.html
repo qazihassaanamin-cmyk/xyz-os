@@ -1,100 +1,94 @@
 {#
-  One form field.
+One form field.
 
-  Wraps label, control, hint and errors so every field in the application is
-  labelled and its errors are associated with the input rather than floating
-  loose at the top of the page.
+Wraps label, control, hint and errors so every field in the application is
+labelled and its errors are associated with the input rather than floating
+loose at the top of the page.
 #}
 {% macro field(name, label, value=None, type="text", required=False, hint=None,
-               errors=None, placeholder=None, autocomplete=None, maxlength=None,
-               minlength=None, rows=None, help_id=None) %}
-  {% set field_id = "f-" + name %}
-  {% set has_errors = errors and errors|length > 0 %}
+errors=None, placeholder=None, autocomplete=None, maxlength=None,
+minlength=None, rows=None, help_id=None) %}
+{% set field_id = "f-" + name %}
+{% set has_errors = errors and errors|length > 0 %}
 <div class="field">
- <label for="{{ field_id }}">
+  <label for="{{ field_id }}">
     {{ label }}{% if required %} <span class="tone-critical" aria-hidden="true">*</span>{% endif %}
- </label>
+  </label>
 
   {% if type == "textarea" %}
- <textarea id="{{ field_id }}" name="{{ name }}" rows="{{ rows or 5 }}"
-              {% if required %}required aria-required="true"{% endif %}
-              {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-              {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
-              {% if has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error"{% endif %}>{{ value or "" }}</textarea>
+  <textarea id="{{ field_id }}" name="{{ name }}" rows="{{ rows or 5 }}" {% if required %}required aria-required="true"
+    {% endif %} {% if placeholder %}placeholder="{{ placeholder }}" {% endif %} {% if maxlength
+    %}maxlength="{{ maxlength }}" {% endif %} {% if has_errors %}aria-invalid="true"
+    aria-describedby="{{ field_id }}-error" {% endif %}>{{ value or "" }}</textarea>
   {% elif type == "select" %}
-    {# Options are passed through the caller block. #}
-    {{ caller() }}
+  {# Options are passed through the caller block. #}
+  {{ caller() }}
   {% else %}
- <input id="{{ field_id }}" name="{{ name }}" type="{{ type }}"
-           value="{{ value if value is not none else '' }}"
-           {% if required %}required aria-required="true"{% endif %}
-           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-           {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
-           {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
-           {% if minlength %}minlength="{{ minlength }}"{% endif %}
-           {% if has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error"{% endif %}>
+  <input id="{{ field_id }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {% if
+    required %}required aria-required="true" {% endif %} {% if placeholder %}placeholder="{{ placeholder }}" {% endif %}
+    {% if autocomplete %}autocomplete="{{ autocomplete }}" {% endif %} {% if maxlength %}maxlength="{{ maxlength }}" {%
+    endif %} {% if minlength %}minlength="{{ minlength }}" {% endif %} {% if has_errors %}aria-invalid="true"
+    aria-describedby="{{ field_id }}-error" {% endif %}>
   {% endif %}
 
   {% if hint %}
- <p class="field-hint" id="{{ field_id }}-hint">{{ hint }}</p>
+  <p class="field-hint" id="{{ field_id }}-hint">{{ hint }}</p>
   {% endif %}
 
   {% if has_errors %}
- <div class="field-error" id="{{ field_id }}-error">
-      <span>{% for error in errors %}{{ error }}{% if not loop.last %} {% endif %}{% endfor %}</span>
- </div>
+  <div class="field-error" id="{{ field_id }}-error">
+    <span>{% for error in errors %}{{ error }}{% if not loop.last %} {% endif %}{% endfor %}</span>
+  </div>
   {% endif %}
 </div>
 {% endmacro %}
 
 {#
-  Field bound to a WTForms field object.
+Field bound to a WTForms field object.
 
-  Keeps WTForms' own validation and error rendering while the markup stays in
-  one place.
+Keeps WTForms' own validation and error rendering while the markup stays in
+one place.
 #}
 {% macro wt_field(form_field, hint=None, type=None, rows=None, autocomplete=None, placeholder=None) %}
-  {% set field_type = type or ("textarea" if form_field.type == "TextAreaField" else ("password" if form_field.type == "PasswordField" else "text")) %}
-  {% set field_id = "f-" + form_field.name %}
-  {% set has_errors = form_field.errors|length > 0 %}
+{% set field_type = type or ("textarea" if form_field.type == "TextAreaField" else ("password" if form_field.type ==
+"PasswordField" else "text")) %}
+{% set field_id = "f-" + form_field.name %}
+{% set has_errors = form_field.errors|length > 0 %}
 <div class="field">
- <label for="{{ field_id }}">
+  <label for="{{ field_id }}">
     {{ form_field.label.text }}
     {% if form_field.flags.required %} <span class="tone-critical" aria-hidden="true">*</span>{% endif %}
- </label>
+  </label>
 
   {% if field_type == "textarea" %}
- <textarea id="{{ field_id }}" name="{{ form_field.name }}" rows="{{ rows or 5 }}"
-              {% if form_field.flags.required %}required aria-required="true"{% endif %}
-              {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-              {% if has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error"{% endif %}>{{ form_field.data or "" }}</textarea>
+  <textarea id="{{ field_id }}" name="{{ form_field.name }}" rows="{{ rows or 5 }}" {% if form_field.flags.required
+    %}required aria-required="true" {% endif %} {% if placeholder %}placeholder="{{ placeholder }}" {% endif %} {% if
+    has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error" {% endif
+    %}>{{ form_field.data or "" }}</textarea>
   {% elif field_type == "password" %}
- <div class="password-field">
- <input id="{{ field_id }}" name="{{ form_field.name }}" type="password"
-             value=""
-             {% if form_field.flags.required %}required aria-required="true"{% endif %}
-             {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
-             {% if has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error"{% endif %}>
- <button type="button" class="password-toggle" data-password-toggle="{{ field_id }}"
-              aria-pressed="false" aria-label="Show or hide the password">Show</button>
- </div>
+  <div class="password-field">
+    <input id="{{ field_id }}" name="{{ form_field.name }}" type="password" value="" {% if form_field.flags.required
+      %}required aria-required="true" {% endif %} {% if autocomplete %}autocomplete="{{ autocomplete }}" {% endif %} {%
+      if has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error" {% endif %}>
+    <button type="button" class="password-toggle" data-password-toggle="{{ field_id }}" aria-pressed="false"
+      aria-label="Show or hide the password">Show</button>
+  </div>
   {% else %}
- <input id="{{ field_id }}" name="{{ form_field.name }}" type="{{ field_type }}"
-           value="{{ form_field.data if form_field.data is not none else '' }}"
-           {% if form_field.flags.required %}required aria-required="true"{% endif %}
-           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-           {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
-           {% if has_errors %}aria-invalid="true" aria-describedby="{{ field_id }}-error"{% endif %}>
+  <input id="{{ field_id }}" name="{{ form_field.name }}" type="{{ field_type }}"
+    value="{{ form_field.data if form_field.data is not none else '' }}" {% if form_field.flags.required %}required
+    aria-required="true" {% endif %} {% if placeholder %}placeholder="{{ placeholder }}" {% endif %} {% if autocomplete
+    %}autocomplete="{{ autocomplete }}" {% endif %} {% if has_errors %}aria-invalid="true"
+    aria-describedby="{{ field_id }}-error" {% endif %}>
   {% endif %}
 
   {% if hint %}
- <p class="field-hint" id="{{ field_id }}-hint">{{ hint }}</p>
+  <p class="field-hint" id="{{ field_id }}-hint">{{ hint }}</p>
   {% endif %}
 
   {% if has_errors %}
- <div class="field-error" id="{{ field_id }}-error">
-      <span>{% for error in form_field.errors %}{{ error }}{% if not loop.last %} {% endif %}{% endfor %}</span>
- </div>
+  <div class="field-error" id="{{ field_id }}-error">
+    <span>{% for error in form_field.errors %}{{ error }}{% if not loop.last %} {% endif %}{% endfor %}</span>
+  </div>
   {% endif %}
 </div>
 {% endmacro %}

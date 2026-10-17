@@ -3,56 +3,58 @@
 {% block title %}{{ entry.title }}{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('knowledge.index') }}">Knowledge</a>
- <span aria-hidden="true">/</span>
- <span>{{ entry.title|truncate(40) }}</span>
+<a href="{{ url_for('knowledge.index') }}">Knowledge</a>
+<span aria-hidden="true">/</span>
+<span>{{ entry.title|truncate(40) }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>{{ entry.title }}</h1>
- <p class="subtitle">
-      {{ entry.category|title }}
-      {% if entry.project %} · {{ entry.project.name }}{% endif %}
-      · {{ entry.author.display_name if entry.author else "—" }}
-      {% if entry.published_at %} · published {{ entry.published_at|localdate("%d %B %Y") }}{% endif %}
-      · {{ entry.view_count }} view{{ "s" if entry.view_count != 1 else "" }}
- </p>
- </div>
- <div class="page-actions">
-    {% if entry.status == "DRAFT" %}<span class="pill no-dot tone-attention">Draft</span>{% endif %}
-    {% if entry.status == "ARCHIVED" %}<span class="pill no-dot dim">Archived</span>{% endif %}
-    {% if entry.is_decision_record %}<span class="pill no-dot tone-attention">Decision record</span>{% endif %}
-    {% if can_edit %}
- <a class="btn" href="{{ url_for('knowledge.edit', entry_id=entry.id) }}">Edit</a>
- <form method="post" action="{{ url_for('knowledge.archive', entry_id=entry.id) }}"
-              data-confirm="Archive this entry? It stays in the record but leaves the main list.">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
- <button type="submit" class="btn btn-ghost">Archive</button>
- </form>
-    {% endif %}
- </div>
+   <div>
+      <h1>{{ entry.title }}</h1>
+      <p class="subtitle">
+         {{ entry.category|title }}
+         {% if entry.project %} · {{ entry.project.name }}{% endif %}
+         · {{ entry.author.display_name if entry.author else "—" }}
+         {% if entry.published_at %} · published {{ entry.published_at|localdate("%d %B %Y") }}{% endif %}
+         · {{ entry.view_count }} view{{ "s" if entry.view_count != 1 else "" }}
+      </p>
+   </div>
+   <div class="page-actions">
+      {% if entry.status == "DRAFT" %}<span class="pill no-dot tone-attention">Draft</span>{% endif %}
+      {% if entry.status == "ARCHIVED" %}<span class="pill no-dot dim">Archived</span>{% endif %}
+      {% if entry.is_decision_record %}<span class="pill no-dot tone-attention">Decision record</span>{% endif %}
+      {% if can_edit %}
+      <a class="btn" href="{{ url_for('knowledge.edit', entry_id=entry.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('knowledge.archive', entry_id=entry.id) }}"
+         data-confirm="Archive this entry? It stays in the record but leaves the main list.">
+         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+         <button type="submit" class="btn btn-ghost">Archive</button>
+      </form>
+      {% endif %}
+   </div>
 </div>
 
 <article class="panel">
- <div class="panel-body">
-    {% if entry.summary %}
- <p class="lede" style="color:var(--text-secondary);border-left:2px solid var(--border-subtle);padding-left:var(--space-4);">
-        {{ entry.summary }}
- </p>
-    {% endif %}
+   <div class="panel-body">
+      {% if entry.summary %}
+      <p class="lede"
+         style="color:var(--text-secondary);border-left:2px solid var(--border-subtle);padding-left:var(--space-4);">
+         {{ entry.summary }}
+      </p>
+      {% endif %}
 
- <div class="doc">
-      {{ body_html|safe }}
- </div>
- </div>
+      <div class="doc">
+         {{ body_html|safe }}
+      </div>
+   </div>
 </article>
 
 <div class="row row-between mt-6">
- <a class="small" href="{{ url_for('knowledge.index') }}">Back to the knowledge base</a>
-  {% if entry.task %}
- <a class="small" href="{{ url_for('tasks.detail', task_id=entry.task.id) }}">Related task: {{ entry.task.title|truncate(50) }}</a>
-  {% endif %}
+   <a class="small" href="{{ url_for('knowledge.index') }}">Back to the knowledge base</a>
+   {% if entry.task %}
+   <a class="small" href="{{ url_for('tasks.detail', task_id=entry.task.id) }}">Related task: {{
+      entry.task.title|truncate(50) }}</a>
+   {% endif %}
 </div>
 {% endblock %}

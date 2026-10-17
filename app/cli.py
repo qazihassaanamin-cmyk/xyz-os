@@ -16,6 +16,7 @@ from flask import current_app
 from flask.cli import with_appcontext
 
 from app.extensions import db
+from app.models.base import utcnow
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ def register_cli(app) -> None:
     app.cli.add_command(sync_config)
     app.cli.add_command(seed_demo)
     app.cli.add_command(run_maintenance)
+    app.cli.add_command(notify_run)
+    app.cli.add_command(xp_reconcile)
+    app.cli.add_command(doctor)
 
 
 def _banner(title: str) -> None:
@@ -432,12 +436,6 @@ def seed_demo(yes_i_mean_it: bool) -> None:
 @click.command("maintenance")
 @with_appcontext
 def run_maintenance() -> None:
-    """Recompute streaks, refresh challenges and purge expired uploads.
-
-    Runs on demand. Nothing in the application requires a scheduler: every value
-    this command produces is also derived lazily on the request path, so the
-    site works correctly if this is never run.
-    """
     from app.models.user import User
     from app.services.challenge_service import ensure_weekly_challenges
     from app.services.streak_service import repair_streaks
@@ -455,3 +453,264 @@ def run_maintenance() -> None:
     click.echo(f"Streaks and balances recomputed for {len(users)} member(s).")
     click.echo(f"Active weekly challenges: {len(challenges)}.")
     click.echo(f"Expired uploads purged: {purged}.")
+
+
+# ---------------------------------------------------------------------------
+# Scheduled work (run from a console or a hosting cron/task)
+# ---------------------------------------------------------------------------
+
+@click.command("notify-run")
+@click.option(
+    "--due-soon-days",
+    default=1,
+    show_default=True,
+    help="How many days before a deadline the reminder is raised.",
+)
+@with_appcontext
+def notify_run(due_soon_days: int) -> None:
+    """Generate deadline and overdue notifications.
+
+    PythonAnywhere's free tier has no scheduled tasks, so this is deliberately a
+    command rather than a background job: run it from a console or a scheduled
+    task, or not at all. Every notification it produces is also generated lazily
+    when the relevant dashboard is loaded, which is why the application is fully
+    usable even if this never runs.
+    """
+    from app.models.task import Task, TaskStatus
+    from app.services.notification_service import notify
+    from app.services.task_service import due_soon_tasks_query, overdue_tasks_query
+    from app.utils.dates import company_today
+
+    today = company_today()
+    created = 0
+    skipped = 0
+
+    for task in due_soon_tasks_query(days=due_soon_days).all():
+        if task.assignee is None:
+            continue
+        row = notify(
+            task.assignee,
+            "TASK_DUE_SOON",
+            title=f"Due soon: {task.title}",
+            body=_deadline_body(task, today),
+            link_endpoint="tasks.detail",
+            link_params=f"task_id={task.id}",
+            subject_type="task",
+            subject_id=task.id,
+            dedupe_key=f"task-due-soon:{task.id}:{today.isoformat()}",
+        )
+        if row is not None:
+            created += 1
+        else:
+            skipped += 1
+        if task.deadline_notified_at is None:
+            task.deadline_notified_at = utcnow()
+    db.session.commit()
+
+    overdue_created = 0
+    for task in overdue_tasks_query().all():
+        if task.assignee is None:
+            continue
+        row = notify(
+            task.assignee,
+            "TASK_OVERDUE",
+            title=f"Overdue: {task.title}",
+            body=_deadline_body(task, today),
+            link_endpoint="tasks.detail",
+            link_params=f"task_id={task.id}",
+            subject_type="task",
+            subject_id=task.id,
+            dedupe_key=f"task-overdue:{task.id}:{today.isoformat()}",
+        )
+        if row is not None:
+            overdue_created += 1
+        if task.overdue_notified_at is None:
+            task.overdue_notified_at = utcnow()
+    db.session.commit()
+
+    open_tasks = Task.query.filter(
+        Task.status.notin_([TaskStatus.COMPLETED.value, TaskStatus.CANCELLED.value])
+    ).count()
+
+    click.echo(f"Deadline reminders created: {created} (already sent: {skipped}).")
+    click.echo(f"Overdue reminders created: {overdue_created}.")
+    click.echo(f"Open tasks examined: {open_tasks}.")
+
+
+def _deadline_body(task, today) -> str:
+    if task.due_date is None:
+        return "No deadline recorded."
+    delta = (task.due_date - today).days
+    if delta < 0:
+        return f"{abs(delta)} day(s) past the deadline of {task.due_date.isoformat()}."
+    if delta == 0:
+        return f"Due today ({task.due_date.isoformat()})."
+    return f"Due in {delta} day(s) on {task.due_date.isoformat()}."
+
+
+@click.command("xp-reconcile")
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Report drift without writing anything.",
+)
+@with_appcontext
+def xp_reconcile(check: bool) -> None:
+    """Rebuild every XP summary from the ledger, the single source of truth.
+
+    ``xp_transactions`` is authoritative; ``xp_profiles`` and ``user_xp_summary``
+    are caches. This command recomputes both, rewrites the summary rows, and
+    reports any drift it found so a bug cannot hide behind a stale number.
+    """
+    from app.models.user import User
+    from app.models.xp import XpProfile, XpTransaction, UserXpSummary
+    from app.services import xp_service
+
+    users = User.query.order_by(User.id.asc()).all()
+    drifted: list[str] = []
+    rebuilt = 0
+
+    for user in users:
+        before_profile = XpProfile.query.filter_by(user_id=user.id).first()
+        before_balance = before_profile.balance if before_profile else None
+        before_lifetime = before_profile.lifetime_xp if before_profile else None
+
+        ledger_balance = xp_service.ledger_balance(user)
+        ledger_lifetime = sum(
+            row.amount
+            for row in XpTransaction.query.filter_by(user_id=user.id).all()
+            if row.amount > 0 and row.reversed_by_id is None
+        )
+
+        if before_balance != ledger_balance or before_lifetime != max(0, ledger_lifetime):
+            drifted.append(
+                f"{user.username}: cached {before_balance}/{before_lifetime} "
+                f"vs ledger {ledger_balance}/{max(0, ledger_lifetime)}"
+            )
+
+        if not check:
+            xp_service.recompute_profile(user)
+            _rebuild_summary(user)
+            rebuilt += 1
+
+    if check:
+        click.echo(f"Members checked: {len(users)}.")
+        if drifted:
+            click.echo(f"Drift found in {len(drifted)} member(s):", err=True)
+            for line in drifted:
+                click.echo(f"  {line}", err=True)
+            raise SystemExit(1)
+        click.echo("No drift: every cached total matches the ledger.")
+        return
+
+    click.echo(f"Rebuilt {rebuilt} member(s) from {XpTransaction.query.count()} ledger rows.")
+    if drifted:
+        click.echo(f"Corrections applied for {len(drifted)} member(s):")
+        for line in drifted:
+            click.echo(f"  {line}")
+    else:
+        click.echo("No drift was found.")
+
+
+def _rebuild_summary(user) -> UserXpSummary:
+    """Recompute the materialised summary row for one member."""
+    from app.models.xp import XpTransaction, UserXpSummary
+    from app.services.xp_service import ensure_profile
+
+    profile = ensure_profile(user)
+    rows = XpTransaction.query.filter_by(user_id=user.id).all()
+
+    summary = UserXpSummary.query.filter_by(user_id=user.id).first()
+    if summary is None:
+        summary = UserXpSummary(user_id=user.id)
+        db.session.add(summary)
+
+    awards = [row for row in rows if row.amount > 0 and row.reversal_of_id is None]
+    deductions = [row for row in rows if row.amount < 0]
+
+    summary.balance = sum(row.amount for row in rows if row.reversal_of_id is None)
+    summary.lifetime_xp = max(0, sum(row.amount for row in awards if row.reversed_by_id is None))
+    summary.awarded_total = sum(row.amount for row in awards)
+    summary.deducted_total = sum(row.amount for row in deductions)
+    summary.reversed_total = sum(
+        abs(row.amount) for row in rows if row.reversal_of_id is not None
+    )
+    summary.current_level = profile.current_level
+    summary.level_name = profile.level_name
+    summary.transaction_count = len(rows)
+    stamps = [row.created_at for row in rows if row.created_at is not None]
+    summary.first_award_at = min(stamps) if stamps else None
+    summary.last_award_at = max(stamps) if stamps else None
+    summary.rebuilt_at = utcnow()
+    db.session.commit()
+    return summary
+
+
+@click.command("doctor")
+@with_appcontext
+def doctor() -> None:
+    """Report the state of the deployment without changing anything.
+
+    Answers the questions worth asking after a deploy: is the schema present and
+    migrated, is there a CEO, are uploads writable, and are secrets configured.
+    """
+    import os
+
+    from sqlalchemy import inspect as sa_inspect
+
+    from app.models.user import User, UserRole
+
+    click.echo()
+    click.echo("XYZ OS — deployment check")
+    click.echo("-" * 60)
+
+    click.echo(f"Environment:        {current_app.config.get('ENV_NAME')}")
+    click.echo(f"Company timezone:   {current_app.config.get('COMPANY_TZ')}")
+    click.echo(f"Database:           {_redact_dsn(current_app.config.get('SQLALCHEMY_DATABASE_URI', ''))}")
+    click.echo(f"Upload directory:   {current_app.config.get('UPLOAD_DIR_ABS')}")
+
+    upload_dir = current_app.config.get("UPLOAD_DIR_ABS", "")
+    click.echo(f"Uploads writable:   {os.access(upload_dir, os.W_OK) if upload_dir else False}")
+
+    secret = current_app.config.get("SECRET_KEY", "")
+    click.echo(f"SECRET_KEY set:     {bool(secret) and 'change-me' not in secret}")
+
+    try:
+        tables = set(sa_inspect(db.engine).get_table_names())
+        click.echo(f"Schema tables:      {len(tables)}")
+    except Exception as exc:  # pragma: no cover - reported, not raised
+        click.echo(f"Schema tables:      unreachable ({exc})")
+        tables = set()
+
+    try:
+        version_rows = db.session.execute(
+            db.text("SELECT version_num FROM alembic_version")
+        ).fetchall()
+        revision = version_rows[0][0] if version_rows else "none"
+        click.echo(f"Migration revision: {revision}")
+    except Exception:
+        click.echo("Migration revision: not recorded (run `flask db upgrade`)")
+
+    try:
+        ceos = User.query.filter_by(role=UserRole.CEO.value, is_active_flag=True).count()
+        members = User.query.filter_by(is_active_flag=True).count()
+        click.echo(f"Active accounts:    {members} ({ceos} CEO)")
+    except Exception:
+        click.echo("Active accounts:    unreadable (run `flask db upgrade` first)")
+
+    if not tables:
+        click.echo()
+        click.echo("Next: flask db upgrade, then flask create-ceo.")
+    click.echo()
+
+
+def _redact_dsn(dsn: str) -> str:
+    """Hide any password embedded in a database URL before printing it."""
+    if "@" not in dsn or "://" not in dsn:
+        return dsn
+    scheme, rest = dsn.split("://", 1)
+    credentials, host = rest.split("@", 1)
+    if ":" in credentials:
+        user = credentials.split(":", 1)[0]
+        credentials = f"{user}:***"
+    return f"{scheme}://{credentials}@{host}"

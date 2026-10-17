@@ -6,97 +6,102 @@
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>Team members</h1>
- <p class="subtitle">
-      {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
-      Columns are kept separate on purpose: task delivery, review outcomes, focus
-      sessions and daily reporting measure different things.
- </p>
- </div>
- <div class="page-actions">
- <a class="btn btn-ghost" href="{{ url_for('team.index') }}">Public directory</a>
- <a class="btn btn-ghost" href="{{ url_for('ceo.reports') }}">Full reports</a>
- </div>
+     <div>
+          <h1>Team members</h1>
+          <p class="subtitle">
+               {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
+               Columns are kept separate on purpose: task delivery, review outcomes, focus
+               sessions and daily reporting measure different things.
+          </p>
+     </div>
+     <div class="page-actions">
+          <a class="btn btn-ghost" href="{{ url_for('team.index') }}">Public directory</a>
+          <a class="btn btn-ghost" href="{{ url_for('ceo.reports') }}">Full reports</a>
+     </div>
 </div>
 
 {% for row in rows %}
 <section class="panel">
- <div class="panel-head">
- <div>
- <h2 style="margin-bottom:2px;font-size:var(--text-md);">
- <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
-        {% if not row.user.is_active %}<span class="pill no-dot dim">Deactivated</span>{% endif %}
- </h2>
- <p class="small muted mb-0">
-        {{ row.user.official_title }}
-        · {{ row.user.identifier_label }}
-        · last signed in {{ row.user.last_login_at|relative if row.user.last_login_at else "never" }}
-      </p>
- </div>
- <div class="row row-tight">
- <span class="pill no-dot">Level {{ row.profile.current_level }} · {{ row.profile.level_name }}</span>
- <span class="pill no-dot">{{ row.profile.lifetime_xp }} XP</span>
- <span class="pill no-dot">{{ row.achievements }} achievement{{ "s" if row.achievements != 1 else "" }}</span>
- </div>
- </div>
+     <div class="panel-head">
+          <div>
+               <h2 style="margin-bottom:2px;font-size:var(--text-md);">
+                    <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+                    {% if not row.user.is_active %}<span class="pill no-dot dim">Deactivated</span>{% endif %}
+               </h2>
+               <p class="small muted mb-0">
+                    {{ row.user.official_title }}
+                    · {{ row.user.identifier_label }}
+                    · last signed in {{ row.user.last_login_at|relative if row.user.last_login_at else "never" }}
+               </p>
+          </div>
+          <div class="row row-tight">
+               <span class="pill no-dot">Level {{ row.profile.current_level }} · {{ row.profile.level_name }}</span>
+               <span class="pill no-dot">{{ row.profile.lifetime_xp }} XP</span>
+               <span class="pill no-dot">{{ row.achievements }} achievement{{ "s" if row.achievements != 1 else ""
+                    }}</span>
+          </div>
+     </div>
 
- <div class="panel-body">
- <div class="stat-strip">
- <div class="stat">
- <span class="label">Open tasks</span>
- <span class="value numeric">{{ row.workload.open_tasks }}</span>
- <span class="meta">{{ row.workload.overdue }} overdue</span>
- </div>
- <div class="stat">
- <span class="label">Awaiting their review</span>
- <span class="value numeric {% if row.workload.awaiting_my_review %}attention{% endif %}">{{ row.workload.awaiting_my_review }}</span>
- </div>
- <div class="stat">
- <span class="label">Completed</span>
- <span class="value numeric positive">{{ row.tasks.completed }}</span>
- <span class="meta">in this period</span>
- </div>
- <div class="stat">
- <span class="label">Approved</span>
- <span class="value numeric">{{ row.reviews.approved }}</span>
- <span class="meta">{{ row.reviews.changes_requested }} returned</span>
- </div>
- <div class="stat">
- <span class="label">Focus sessions</span>
- <span class="value numeric">{{ row.focus.completed_sessions }}</span>
- <span class="meta">{{ row.focus.total_minutes }} minutes</span>
- </div>
- <div class="stat">
- <span class="label">Check-ins</span>
- <span class="value numeric">{{ row.reporting.checkins }}</span>
- <span class="meta">{{ row.reporting.reports }} reports</span>
- </div>
- <div class="stat">
- <span class="label">Projects</span>
- <span class="value numeric">{{ row.workload.projects }}</span>
- </div>
- </div>
- </div>
+     <div class="panel-body">
+          <div class="stat-strip">
+               <div class="stat">
+                    <span class="label">Open tasks</span>
+                    <span class="value numeric">{{ row.workload.open_tasks }}</span>
+                    <span class="meta">{{ row.workload.overdue }} overdue</span>
+               </div>
+               <div class="stat">
+                    <span class="label">Awaiting their review</span>
+                    <span class="value numeric {% if row.workload.awaiting_my_review %}attention{% endif %}">{{
+                         row.workload.awaiting_my_review }}</span>
+               </div>
+               <div class="stat">
+                    <span class="label">Completed</span>
+                    <span class="value numeric positive">{{ row.tasks.completed }}</span>
+                    <span class="meta">in this period</span>
+               </div>
+               <div class="stat">
+                    <span class="label">Approved</span>
+                    <span class="value numeric">{{ row.reviews.approved }}</span>
+                    <span class="meta">{{ row.reviews.changes_requested }} returned</span>
+               </div>
+               <div class="stat">
+                    <span class="label">Focus sessions</span>
+                    <span class="value numeric">{{ row.focus.completed_sessions }}</span>
+                    <span class="meta">{{ row.focus.total_minutes }} minutes</span>
+               </div>
+               <div class="stat">
+                    <span class="label">Check-ins</span>
+                    <span class="value numeric">{{ row.reporting.checkins }}</span>
+                    <span class="meta">{{ row.reporting.reports }} reports</span>
+               </div>
+               <div class="stat">
+                    <span class="label">Projects</span>
+                    <span class="value numeric">{{ row.workload.projects }}</span>
+               </div>
+          </div>
+     </div>
 
- <div class="panel-foot">
- <div class="btn-row">
- <a class="btn btn-sm" href="{{ url_for('team.profile', username=row.user.username) }}">Profile</a>
- <a class="btn btn-sm btn-ghost" href="{{ url_for('xp.member_history', username=row.user.username) }}">XP history</a>
- <a class="btn btn-sm btn-ghost" href="{{ url_for('tasks.index', view='team', assignee=row.user.id) }}">Their tasks</a>
- <a class="btn btn-sm btn-ghost" href="{{ url_for('team.profile', username=row.user.username, tab='recognition') }}">Recognition</a>
- </div>
- </div>
+     <div class="panel-foot">
+          <div class="btn-row">
+               <a class="btn btn-sm" href="{{ url_for('team.profile', username=row.user.username) }}">Profile</a>
+               <a class="btn btn-sm btn-ghost" href="{{ url_for('xp.member_history', username=row.user.username) }}">XP
+                    history</a>
+               <a class="btn btn-sm btn-ghost"
+                    href="{{ url_for('tasks.index', view='team', assignee=row.user.id) }}">Their tasks</a>
+               <a class="btn btn-sm btn-ghost"
+                    href="{{ url_for('team.profile', username=row.user.username, tab='recognition') }}">Recognition</a>
+          </div>
+     </div>
 </section>
 {% endfor %}
 
 <div class="notice mt-6">
- <p class="field-label mb-2">A note on comparing people</p>
- <p class="small muted mb-0">
-      Responsibilities differ. Someone carrying client conversations, review load or
-      unplanned support will show fewer completed tasks than someone on a single
-      focused brief, and that is not a performance difference. Use these figures to
-      ask better questions, not to rank people.
- </p>
+     <p class="field-label mb-2">A note on comparing people</p>
+     <p class="small muted mb-0">
+          Responsibilities differ. Someone carrying client conversations, review load or
+          unplanned support will show fewer completed tasks than someone on a single
+          focused brief, and that is not a performance difference. Use these figures to
+          ask better questions, not to rank people.
+     </p>
 </div>
 {% endblock %}

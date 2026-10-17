@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+{% from "partials/_status_pill.html" import status_pill %}
+
+{% block title %}Founders{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.ceo') }}">Command centre</a>
+<span aria-hidden="true">/</span>
+<span>Founders</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Founders</h1>
+        <p class="subtitle">
+            The four founding members of {{ company_name }}. Who they are, what
+            they own, and the disclaimer that applies to each role.
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-ghost" href="{{ url_for('team.index') }}">Public directory</a>
+    </div>
+</div>
+
+<div class="stack-4">
+    {% for row in rows %}
+    {% set spec = row.spec %}
+    {% set user = row.user %}
+    <section class="panel">
+        <div class="panel-head">
+            <div class="row row-tight">
+                <div>
+                    <h2 style="margin-bottom:2px;font-size:var(--text-md);">
+                        <a href="{{ url_for('team.profile', username=spec.username) }}">{{ spec.full_name }}</a>
+                    </h2>
+                    <p class="small muted mb-0">
+                        {{ spec.title }} · {{ spec.identifier }} · {{ spec.role }}
+                    </p>
+                </div>
+                <div class="row row-tight">
+                    <span class="pill no-dot">{{ spec.role }}</span>
+                    {% if user %}
+                    <span class="pill no-dot">Level {{ user.xp_profile.current_level if user.xp_profile else "—" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            {% if spec.summary %}
+            <p class="lede mb-4">{{ spec.summary }}</p>
+            {% endif %}
+
+            <div class="split">
+                <div>
+                    <p class="field-label mb-2">Responsibilities</p>
+                    <ul class="stack-2" style="padding-left:20px;margin:0;">
+                        {% for responsibility in spec.responsibilities %}
+                        <li class="small">{{ responsibility }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    {% if spec.title_basis %}
+                    <p class="field-hint mt-4">{{ spec.title_basis }}</p>
+                    {% endif %}
+
+                    {% if spec.disclaimer %}
+                    <p class="small muted mt-4">{{ spec.disclaimer }}</p>
+                    {% endif %}
+
+                    {% if user and user.functions %}
+                    <div class="mt-6">
+                        <p class="field-label mb-2">Functions in the company</p>
+                        <p class="small">{{ user.functions }}</p>
+                        <p class="tiny dim mt-1">
+                            Set by the CEO from the member profile. Free text, because
+                            the brief's responsibilities differ per founder.
+                        </p>
+                    </div>
+                    {% elif user %}
+                    <div class="mt-6">
+                        <p class="field-label mb-2">Functions in the company</p>
+                        <p class="small dim">No functions recorded yet.</p>
+                        <a class="tiny" href="{{ url_for('team.profile', username=user.username, tab='overview') }}">Set them</a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    {% if user %}
+                    <dl class="facts">
+                        <div class="fact">
+                            <dt>Account</dt>
+                            <dd>{{ user.identifier_label }}</dd>
+                        </div>
+                        <div class="fact">
+                            <dt>Last signed in</dt>
+                            <dd>{{ user.last_login_at|relative if user.last_login_at else "never" }}</dd>
+                        </div>
+                        <div class="fact">
+                            <dt>Active</dt>
+                            <dd>{{ "Yes" if user.is_active else "No" }}</dd>
+                        </div>
+                        <div class="fact">
+                            <dt>Lifetime XP</dt>
+                            <dd>{{ user.xp_profile.lifetime_xp if user.xp_profile else 0 }}</dd>
+                        </div>
+                    </dl>
+                    {% else %}
+                    {{ empty_state("Account not created yet", "Run flask setup to create this founder's account.") }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-foot">
+            <div class="btn-row">
+                {% if user %}
+                <a class="btn btn-sm" href="{{ url_for('team.profile', username=user.username) }}">Full profile</a>
+                <form method="post" action="{{ url_for('ceo.set_functions', username=user.username) }}" class="row row-tight">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="functions" placeholder="Functions in the company"
+                           value="{{ user.functions or '' }}" maxlength="2000">
+                    <button type="submit" class="btn btn-sm">Save</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

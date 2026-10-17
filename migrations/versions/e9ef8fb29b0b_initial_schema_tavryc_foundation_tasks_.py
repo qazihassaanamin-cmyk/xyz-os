@@ -1,9 +1,22 @@
-"""initial schema: Tavryc foundation, tasks, focus, daily, gamification
+"""initial schema: the XYZ OS foundation.
 
 Revision ID: e9ef8fb29b0b
-Revises: 
+Revises:
 Create Date: 2026-10-17 17:20:12.498629
 
+A single complete baseline: the schema is created once on an empty database, so
+one revision is clearer than a chain of small ones. Every later change must
+arrive as its own revision so a deployment stays reproducible from scratch.
+
+Reviewed after autogeneration. Two things here are load-bearing business rules
+rather than incidental indexes:
+
+* ``focus_sessions.open_key`` / ``credit_key`` — portable uniqueness guards.
+  PostgreSQL and SQLite could express these as partial unique indexes, MySQL
+  cannot, so the rule is carried by plain UNIQUE columns that are NULL outside
+  the guarded state. A NULL never collides in any dialect.
+* ``notifications.dedupe_key`` — unique, so an event raised from two code paths
+  produces one notice.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -202,16 +215,24 @@ def upgrade():
     sa.Column('size_bytes', sa.BigInteger(), nullable=False),
     sa.Column('sha256', sa.String(length=64), nullable=True),
     sa.Column('caption', sa.Text(), nullable=True),
+    sa.Column('width', sa.Integer(), nullable=True),
+    sa.Column('height', sa.Integer(), nullable=True),
+    sa.Column('progress_stage', sa.String(length=16), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('deleted_by_id', sa.Integer(), nullable=True),
     sa.Column('is_avatar', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['submission_id'], ['submissions.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['uploaded_by_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['deleted_by_id'], ['users.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('stored_name')
     )
     with op.batch_alter_table('attachments', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_attachments_deleted_at'), ['deleted_at'], unique=False)
+        batch_op.create_index(batch_op.f('ix_attachments_progress_stage'), ['progress_stage'], unique=False)
         batch_op.create_index(batch_op.f('ix_attachments_sha256'), ['sha256'], unique=False)
         batch_op.create_index('ix_attachments_submission', ['submission_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_attachments_submission_id'), ['submission_id'], unique=False)
@@ -325,6 +346,8 @@ def upgrade():
     sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('duration_seconds', sa.Integer(), nullable=True),
     sa.Column('credited', sa.Boolean(), nullable=False),
+    sa.Column('open_key', sa.String(length=80), nullable=True),
+    sa.Column('credit_key', sa.String(length=80), nullable=True),
     sa.Column('interrupted_reason', sa.String(length=120), nullable=True),
     sa.Column('xp_awarded_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
@@ -339,8 +362,14 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_focus_sessions_user_id'), ['user_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_focus_sessions_workday_date'), ['workday_date'], unique=False)
         batch_op.create_index('ix_focus_user_started', ['user_id', 'started_at'], unique=False)
-        batch_op.create_index('uq_focus_credited_per_user_day', ['user_id', 'workday_date'], unique=True, sqlite_where=sa.text("status = 'COMPLETED'"), postgresql_where=sa.text("status = 'COMPLETED'"))
-        batch_op.create_index('uq_focus_open_per_user', ['user_id'], unique=True, sqlite_where=sa.text("status IN ('RUNNING','PAUSED')"), postgresql_where=sa.text("status IN ('RUNNING','PAUSED')"))
+        batch_op.create_index('ix_focus_workday_status', ['workday_date', 'status'], unique=False)
+        # Portable uniqueness guards. A NULL never collides in a unique index on
+        # any dialect, so these two columns carry the rules that PostgreSQL and
+        # SQLite would express as partial indexes but MySQL cannot:
+        #   open_key   set while a session is RUNNING or PAUSED
+        #   credit_key set for the single credited session per member per workday
+        batch_op.create_index(batch_op.f('ix_focus_sessions_open_key'), ['open_key'], unique=True)
+        batch_op.create_index(batch_op.f('ix_focus_sessions_credit_key'), ['credit_key'], unique=True)
 
     op.create_table('invitations',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -682,7 +711,11 @@ def upgrade():
     sa.Column('parent_id', sa.Integer(), nullable=True),
     sa.Column('project_id', sa.Integer(), nullable=True),
     sa.Column('task_id', sa.Integer(), nullable=True),
+    sa.Column('room_id', sa.Integer(), nullable=True),
+    sa.Column('client_msg_id', sa.String(length=64), nullable=True),
+    sa.Column('reply_to_id', sa.Integer(), nullable=True),
     sa.Column('edited_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('is_hidden', sa.Boolean(), nullable=False),
     sa.Column('hidden_by_id', sa.Integer(), nullable=True),
     sa.Column('hidden_reason', sa.String(length=300), nullable=True),
@@ -692,12 +725,19 @@ def upgrade():
     sa.ForeignKeyConstraint(['author_id'], ['users.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['hidden_by_id'], ['users.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['parent_id'], ['lounge_posts.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['reply_to_id'], ['lounge_posts.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['room_id'], ['chat_rooms.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('author_id', 'client_msg_id', name='uq_lounge_post_client_msg')
     )
     with op.batch_alter_table('lounge_posts', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_lounge_posts_author_id'), ['author_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_lounge_posts_client_msg_id'), ['client_msg_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_lounge_posts_deleted_at'), ['deleted_at'], unique=False)
+        batch_op.create_index(batch_op.f('ix_lounge_posts_room_id'), ['room_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_lounge_posts_reply_to_id'), ['reply_to_id'], unique=False)
         batch_op.create_index('ix_lounge_posts_created', ['created_at'], unique=False)
         batch_op.create_index(batch_op.f('ix_lounge_posts_is_hidden'), ['is_hidden'], unique=False)
         batch_op.create_index('ix_lounge_posts_parent_created', ['parent_id', 'created_at'], unique=False)
@@ -751,6 +791,9 @@ def upgrade():
     sa.Column('status', sa.String(length=20), nullable=False),
     sa.Column('project_id', sa.Integer(), nullable=True),
     sa.Column('decision_note', sa.Text(), nullable=True),
+    sa.Column('decline_reason', sa.Text(), nullable=True),
+    sa.Column('converted_to_type', sa.String(length=20), nullable=True),
+    sa.Column('converted_to_id', sa.Integer(), nullable=True),
     sa.Column('decided_by_id', sa.Integer(), nullable=True),
     sa.Column('decided_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('implemented_at', sa.DateTime(timezone=True), nullable=True),
@@ -765,6 +808,7 @@ def upgrade():
     )
     with op.batch_alter_table('suggestions', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_suggestions_author_id'), ['author_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_suggestions_converted_to_id'), ['converted_to_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_suggestions_category'), ['category'], unique=False)
         batch_op.create_index(batch_op.f('ix_suggestions_project_id'), ['project_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_suggestions_status'), ['status'], unique=False)
@@ -922,8 +966,220 @@ def upgrade():
     # ### end Alembic commands ###
 
 
+    op.create_table('chat_rooms',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=80), nullable=False),
+    sa.Column('slug', sa.String(length=80), nullable=False),
+    sa.Column('description', sa.String(length=300), nullable=True),
+    sa.Column('is_default', sa.Boolean(), nullable=False),
+    sa.Column('is_archived', sa.Boolean(), nullable=False),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('chat_rooms', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_chat_rooms_is_archived'), ['is_archived'], unique=False)
+        batch_op.create_index(batch_op.f('ix_chat_rooms_is_default'), ['is_default'], unique=False)
+        batch_op.create_index(batch_op.f('ix_chat_rooms_name'), ['name'], unique=True)
+        batch_op.create_index(batch_op.f('ix_chat_rooms_slug'), ['slug'], unique=True)
+
+    op.create_table('decision_records',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=200), nullable=False),
+    sa.Column('slug', sa.String(length=220), nullable=False),
+    sa.Column('context', sa.Text(), nullable=False),
+    sa.Column('decision', sa.Text(), nullable=False),
+    sa.Column('consequences', sa.Text(), nullable=True),
+    sa.Column('alternatives', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(length=16), nullable=False),
+    sa.Column('decided_by_id', sa.Integer(), nullable=True),
+    sa.Column('decided_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('project_id', sa.Integer(), nullable=True),
+    sa.Column('superseded_by_id', sa.Integer(), nullable=True),
+    sa.Column('approved_by_id', sa.Integer(), nullable=True),
+    sa.Column('approved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('xp_awarded_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['approved_by_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['decided_by_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['superseded_by_id'], ['decision_records.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('decision_records', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_decision_records_decided_by_id'), ['decided_by_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_decision_records_project_id'), ['project_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_decision_records_slug'), ['slug'], unique=True)
+        batch_op.create_index(batch_op.f('ix_decision_records_status'), ['status'], unique=False)
+        batch_op.create_index('ix_decision_records_status_created', ['status', 'created_at'], unique=False)
+
+    op.create_table('streaks',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('kind', sa.String(length=20), nullable=False),
+    sa.Column('current_count', sa.Integer(), nullable=False),
+    sa.Column('best_count', sa.Integer(), nullable=False),
+    sa.Column('last_date', sa.Date(), nullable=True),
+    sa.Column('started_on', sa.Date(), nullable=True),
+    sa.Column('broken_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'kind', name='uq_streak_member_kind')
+    )
+    with op.batch_alter_table('streaks', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_streaks_kind'), ['kind'], unique=False)
+        batch_op.create_index('ix_streaks_kind_current', ['kind', 'current_count'], unique=False)
+        batch_op.create_index(batch_op.f('ix_streaks_last_date'), ['last_date'], unique=False)
+        batch_op.create_index(batch_op.f('ix_streaks_user_id'), ['user_id'], unique=False)
+
+    op.create_table('user_xp_summary',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('balance', sa.Integer(), nullable=False),
+    sa.Column('lifetime_xp', sa.Integer(), nullable=False),
+    sa.Column('awarded_total', sa.Integer(), nullable=False),
+    sa.Column('deducted_total', sa.Integer(), nullable=False),
+    sa.Column('reversed_total', sa.Integer(), nullable=False),
+    sa.Column('current_level', sa.Integer(), nullable=False),
+    sa.Column('level_name', sa.String(length=40), nullable=False),
+    sa.Column('transaction_count', sa.Integer(), nullable=False),
+    sa.Column('first_award_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_award_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('rebuilt_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('user_xp_summary', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_user_xp_summary_user_id'), ['user_id'], unique=True)
+
+    op.create_table('lounge_read_state',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('room_id', sa.Integer(), nullable=False),
+    sa.Column('last_read_id', sa.Integer(), nullable=False),
+    sa.Column('last_read_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['room_id'], ['chat_rooms.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'room_id', name='uq_lounge_read_state_member_room')
+    )
+    with op.batch_alter_table('lounge_read_state', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_lounge_read_state_room_id'), ['room_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_lounge_read_state_user_id'), ['user_id'], unique=False)
+
+    op.create_table('suggestion_comments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('suggestion_id', sa.Integer(), nullable=False),
+    sa.Column('author_id', sa.Integer(), nullable=True),
+    sa.Column('body', sa.Text(), nullable=False),
+    sa.Column('is_hidden', sa.Boolean(), nullable=False),
+    sa.Column('hidden_by_id', sa.Integer(), nullable=True),
+    sa.Column('hidden_reason', sa.String(length=300), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['author_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['hidden_by_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['suggestion_id'], ['suggestions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('suggestion_comments', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_suggestion_comments_author_id'), ['author_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_suggestion_comments_is_hidden'), ['is_hidden'], unique=False)
+        batch_op.create_index(batch_op.f('ix_suggestion_comments_suggestion_id'), ['suggestion_id'], unique=False)
+        batch_op.create_index('ix_suggestion_comments_suggestion_created', ['suggestion_id', 'created_at'], unique=False)
+
+    op.create_table('suggestion_status_events',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('suggestion_id', sa.Integer(), nullable=False),
+    sa.Column('from_status', sa.String(length=20), nullable=True),
+    sa.Column('to_status', sa.String(length=20), nullable=False),
+    sa.Column('note', sa.Text(), nullable=True),
+    sa.Column('actor_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['actor_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['suggestion_id'], ['suggestions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('suggestion_status_events', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_suggestion_status_events_actor_id'), ['actor_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_suggestion_status_events_suggestion_id'), ['suggestion_id'], unique=False)
+        batch_op.create_index('ix_suggestion_status_events_suggestion_created', ['suggestion_id', 'created_at'], unique=False)
+
+    op.create_table('suggestion_anon_votes',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('suggestion_id', sa.Integer(), nullable=False),
+    sa.Column('voter_hash', sa.String(length=64), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['suggestion_id'], ['suggestions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('suggestion_id', 'voter_hash', name='uq_suggestion_anon_vote')
+    )
+    with op.batch_alter_table('suggestion_anon_votes', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_suggestion_anon_votes_suggestion_id'), ['suggestion_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_suggestion_anon_votes_voter_hash'), ['voter_hash'], unique=False)
+
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
+    with op.batch_alter_table('suggestion_anon_votes', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_suggestion_anon_votes_voter_hash'))
+        batch_op.drop_index(batch_op.f('ix_suggestion_anon_votes_suggestion_id'))
+
+    op.drop_table('suggestion_anon_votes')
+    with op.batch_alter_table('suggestion_status_events', schema=None) as batch_op:
+        batch_op.drop_index('ix_suggestion_status_events_suggestion_created')
+        batch_op.drop_index(batch_op.f('ix_suggestion_status_events_suggestion_id'))
+        batch_op.drop_index(batch_op.f('ix_suggestion_status_events_actor_id'))
+
+    op.drop_table('suggestion_status_events')
+    with op.batch_alter_table('suggestion_comments', schema=None) as batch_op:
+        batch_op.drop_index('ix_suggestion_comments_suggestion_created')
+        batch_op.drop_index(batch_op.f('ix_suggestion_comments_suggestion_id'))
+        batch_op.drop_index(batch_op.f('ix_suggestion_comments_is_hidden'))
+        batch_op.drop_index(batch_op.f('ix_suggestion_comments_author_id'))
+
+    op.drop_table('suggestion_comments')
+    with op.batch_alter_table('lounge_read_state', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_lounge_read_state_user_id'))
+        batch_op.drop_index(batch_op.f('ix_lounge_read_state_room_id'))
+
+    op.drop_table('lounge_read_state')
+    with op.batch_alter_table('user_xp_summary', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_user_xp_summary_user_id'))
+
+    op.drop_table('user_xp_summary')
+    with op.batch_alter_table('streaks', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_streaks_user_id'))
+        batch_op.drop_index(batch_op.f('ix_streaks_last_date'))
+        batch_op.drop_index('ix_streaks_kind_current')
+        batch_op.drop_index(batch_op.f('ix_streaks_kind'))
+
+    op.drop_table('streaks')
+    with op.batch_alter_table('decision_records', schema=None) as batch_op:
+        batch_op.drop_index('ix_decision_records_status_created')
+        batch_op.drop_index(batch_op.f('ix_decision_records_status'))
+        batch_op.drop_index(batch_op.f('ix_decision_records_slug'))
+        batch_op.drop_index(batch_op.f('ix_decision_records_project_id'))
+        batch_op.drop_index(batch_op.f('ix_decision_records_decided_by_id'))
+
+    op.drop_table('decision_records')
+    with op.batch_alter_table('chat_rooms', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_chat_rooms_slug'))
+        batch_op.drop_index(batch_op.f('ix_chat_rooms_name'))
+        batch_op.drop_index(batch_op.f('ix_chat_rooms_is_default'))
+        batch_op.drop_index(batch_op.f('ix_chat_rooms_is_archived'))
+
+    op.drop_table('chat_rooms')
     with op.batch_alter_table('suggestion_votes', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_suggestion_votes_voter_token'))
         batch_op.drop_index(batch_op.f('ix_suggestion_votes_user_id'))
@@ -990,6 +1246,10 @@ def downgrade():
 
     op.drop_table('milestones')
     with op.batch_alter_table('lounge_posts', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_lounge_posts_reply_to_id'))
+        batch_op.drop_index(batch_op.f('ix_lounge_posts_room_id'))
+        batch_op.drop_index(batch_op.f('ix_lounge_posts_deleted_at'))
+        batch_op.drop_index(batch_op.f('ix_lounge_posts_client_msg_id'))
         batch_op.drop_index(batch_op.f('ix_lounge_posts_task_id'))
         batch_op.drop_index(batch_op.f('ix_lounge_posts_project_id'))
         batch_op.drop_index(batch_op.f('ix_lounge_posts_parent_id'))
@@ -1097,8 +1357,9 @@ def downgrade():
 
     op.drop_table('invitations')
     with op.batch_alter_table('focus_sessions', schema=None) as batch_op:
-        batch_op.drop_index('uq_focus_open_per_user', sqlite_where=sa.text("status IN ('RUNNING','PAUSED')"), postgresql_where=sa.text("status IN ('RUNNING','PAUSED')"))
-        batch_op.drop_index('uq_focus_credited_per_user_day', sqlite_where=sa.text("status = 'COMPLETED'"), postgresql_where=sa.text("status = 'COMPLETED'"))
+        batch_op.drop_index(batch_op.f('ix_focus_sessions_credit_key'))
+        batch_op.drop_index(batch_op.f('ix_focus_sessions_open_key'))
+        batch_op.drop_index('ix_focus_workday_status')
         batch_op.drop_index('ix_focus_user_started')
         batch_op.drop_index(batch_op.f('ix_focus_sessions_workday_date'))
         batch_op.drop_index(batch_op.f('ix_focus_sessions_user_id'))
@@ -1143,6 +1404,8 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_attachments_submission_id'))
         batch_op.drop_index('ix_attachments_submission')
         batch_op.drop_index(batch_op.f('ix_attachments_sha256'))
+        batch_op.drop_index(batch_op.f('ix_attachments_progress_stage'))
+        batch_op.drop_index(batch_op.f('ix_attachments_deleted_at'))
 
     op.drop_table('attachments')
     with op.batch_alter_table('xp_rules', schema=None) as batch_op:

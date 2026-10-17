@@ -43,7 +43,10 @@ def _category_boards(*, start, end, limit: int = 8) -> dict:
 
     members = User.query.filter_by(is_active_flag=True).all()
 
-    delivery, quality, consistency, collaboration = [], []
+    delivery: list[dict] = []
+    quality: list[dict] = []
+    consistency: list[dict] = []
+    collaboration: list[dict] = []
 
     for member in members:
         approved = Submission.query.filter(

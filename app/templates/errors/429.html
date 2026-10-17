@@ -4,16 +4,16 @@
 
 {% block content %}
 <div class="panel" style="max-width: 620px;">
- <div class="panel-body">
- <h1>That was too many requests</h1>
- <p class="muted">
-      You have hit a limit on how often this action can be repeated. Wait a
-      minute, then try again. The limits exist to keep the shared server healthy
-      for everyone.
- </p>
- <div class="btn-row mt-6">
- <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
- </div>
- </div>
+     <div class="panel-body">
+          <h1>That was too many requests</h1>
+          <p class="muted">
+               You have hit a limit on how often this action can be repeated. Wait a
+               minute, then try again. The limits exist to keep the shared server healthy
+               for everyone.
+          </p>
+          <div class="btn-row mt-6">
+               <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
+          </div>
+     </div>
 </div>
 {% endblock %}

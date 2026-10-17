@@ -18,6 +18,7 @@ from app.permissions import can_view_task, login_required
 from app.services import focus_service, task_service
 from app.utils.dates import company_today, humanise_seconds
 from app.utils.pagination import paginate
+from app.utils.validators import nulls_last_asc
 
 bp = Blueprint("focus", __name__)
 
@@ -35,7 +36,7 @@ def _selectable_tasks():
     return (
         task_service.visible_tasks_query(current_user, include_completed=False)
         .filter(Task.assignee_id == current_user.id)
-        .order_by(Task.due_date.asc().nulls_last())
+        .order_by(*nulls_last_asc(Task.due_date))
         .limit(50)
         .all()
     )

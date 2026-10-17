@@ -19,7 +19,7 @@ from datetime import timedelta
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.base import utcnow
+from app.models.base import as_utc, utcnow
 from app.models.focus import FocusSession, FocusStatus
 from app.services.audit_service import record_audit
 from app.utils.dates import workday_for
@@ -72,14 +72,14 @@ def apply_interruption_policy(session: FocusSession) -> FocusSession | None:
     reason = None
 
     if session.status == FocusStatus.PAUSED.value and session.last_resumed_at is not None:
-        last = _aware(session.last_resumed_at)
-        if (now - last).total_seconds() > pause_idle:
+        last = as_utc(session.last_resumed_at)
+        if last is not None and (now - last).total_seconds() > pause_idle:
             reason = "Paused for longer than the allowed limit."
             changed = True
     elif session.status == FocusStatus.RUNNING.value:
         # Activity is proved by any state read; ``updated_at`` is touched by
         # every heartbeat, so a stale one means the member stopped interacting.
-        last_seen = _aware(session.updated_at or session.last_resumed_at or session.started_at)
+        last_seen = as_utc(session.updated_at or session.last_resumed_at or session.started_at)
         if last_seen is not None and (now - last_seen).total_seconds() > running_stale:
             reason = "No activity recorded for the allowed limit."
             changed = True
@@ -94,6 +94,8 @@ def apply_interruption_policy(session: FocusSession) -> FocusSession | None:
     session.ended_at = now
     session.duration_seconds = int(session.accumulated_seconds or 0)
     session.interrupted_reason = reason
+    # Releasing the guard lets the member start again straight away.
+    session.open_key = None
     db.session.commit()
 
     record_audit(
@@ -108,13 +110,8 @@ def apply_interruption_policy(session: FocusSession) -> FocusSession | None:
 
 
 def _aware(value):
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        from datetime import timezone
-
-        return value.replace(tzinfo=timezone.utc)
-    return value
+    """Backwards-compatible alias for :func:`app.models.base.as_utc`."""
+    return as_utc(value)
 
 
 def start_session(user, *, goal: str | None = None, task=None) -> FocusSession:
@@ -140,6 +137,7 @@ def start_session(user, *, goal: str | None = None, task=None) -> FocusSession:
         started_at=now,
         last_resumed_at=now,
         accumulated_seconds=0,
+        open_key=f"user:{user.id}",
     )
     db.session.add(session)
     try:
@@ -169,6 +167,7 @@ def pause_session(session: FocusSession, *, actor) -> FocusSession:
     session.accumulated_seconds = session.elapsed_seconds(now)
     session.last_resumed_at = now
     session.status = FocusStatus.PAUSED.value
+    # Still open, so the guard stays held: a paused session is not finished.
     db.session.commit()
 
     record_audit(
@@ -259,29 +258,35 @@ def _complete_session(session: FocusSession, actor, elapsed: int, now) -> Finish
     session.ended_at = now
     session.duration_seconds = elapsed
     session.accumulated_seconds = elapsed
+    session.open_key = None
 
     already_credited_today = (
         FocusSession.query.filter(
             FocusSession.user_id == actor.id,
             FocusSession.workday_date == session.workday_date,
             FocusSession.status == FocusStatus.COMPLETED.value,
+            FocusSession.credited.is_(True),
             FocusSession.id != session.id,
         ).first()
         is not None
     )
     session.credited = not already_credited_today
+    session.credit_key = None if already_credited_today else session.credit_key_value
 
     try:
         db.session.commit()
     except IntegrityError:
-        # The partial unique index rejected a second credited session for the
-        # same workday. The work is still recorded, just without extra credit.
+        # The unique credit guard rejected a second credited session for the same
+        # workday, or a concurrent request already claimed the credit. The work is
+        # still recorded, just without a second credit.
         db.session.rollback()
         session = db.session.get(FocusSession, session.id)
         session.status = FocusStatus.COMPLETED.value
         session.ended_at = now
         session.duration_seconds = elapsed
         session.credited = False
+        session.credit_key = None
+        session.open_key = None
         db.session.commit()
         already_credited_today = True
 
@@ -371,6 +376,7 @@ def abandon_session(session: FocusSession, *, actor) -> FocusSession:
     session.ended_at = now
     session.duration_seconds = elapsed
     session.accumulated_seconds = elapsed
+    session.open_key = None
     db.session.commit()
 
     record_audit(

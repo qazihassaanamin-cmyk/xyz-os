@@ -16,6 +16,33 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def as_utc(value: datetime | None) -> datetime | None:
+    """Return ``value`` as an aware UTC datetime.
+
+    SQLite has no native timestamp type and hands back naive datetimes even for
+    a column declared ``DateTime(timezone=True)``, while PostgreSQL returns
+    aware ones. Every comparison against ``utcnow()`` therefore goes through
+    this helper, which keeps the two backends behaving identically instead of
+    raising "can't compare offset-naive and offset-aware datetimes" on SQLite.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def is_past(value: datetime | None) -> bool:
+    """True when ``value`` is in the past. ``None`` is never in the past."""
+    normalised = as_utc(value)
+    return normalised is not None and normalised <= utcnow()
+
+
+def is_future(value: datetime | None) -> bool:
+    normalised = as_utc(value)
+    return normalised is not None and normalised > utcnow()
+
+
 class TimestampMixin:
     """Adds ``created_at`` / ``updated_at`` maintained in UTC.
 

@@ -22,13 +22,14 @@ from app.extensions import db
 from app.models.daily import DailyCheckin, DailyReport
 from app.models.focus import FocusSession, FocusStatus
 from app.models.notification import Notification
-from app.models.project import Milestone, MilestoneStatus, ProjectMember
+from app.models.project import Milestone, MilestoneStatus, Project, ProjectMember, ProjectStatus
 from app.models.task import Blocker, BlockerStatus, Submission, SubmissionStatus, Task, TaskStatus
 from app.models.user import User
 from app.permissions import login_required
 from app.services import daily_service, focus_service, report_service, task_service
 from app.utils.dates import company_today, deadline_label
 from app.utils.pagination import paginate
+from app.utils.validators import nulls_last_asc
 
 bp = Blueprint("dashboard", __name__)
 
@@ -49,7 +50,7 @@ def _member_task_buckets(user) -> dict:
             Task.assignee_id == user.id,
             Task.priority.in_(["HIGH", "CRITICAL"]),
         )
-        .order_by(Task.due_date.asc().nulls_last(), Task.priority.desc())
+        .order_by(*nulls_last_asc(Task.due_date), Task.priority.desc())
         .limit(10)
         .all()
     )
@@ -139,7 +140,7 @@ def index():
     my_projects = (
         ProjectMember.query.filter_by(user_id=current_user.id)
         .join(ProjectMember.project)
-        .filter(db.text("projects.status != 'ARCHIVED'"))
+        .filter(Project.status != ProjectStatus.ARCHIVED.value)
         .all()
     )
 
@@ -151,7 +152,7 @@ def index():
                 [MilestoneStatus.COMPLETED.value, MilestoneStatus.CANCELLED.value]
             ),
         )
-        .order_by(Milestone.due_date.asc().nulls_last())
+        .order_by(*nulls_last_asc(Milestone.due_date))
         .limit(6)
         .all()
     )

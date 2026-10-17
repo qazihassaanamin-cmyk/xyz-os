@@ -3,89 +3,91 @@
 {% block title %}New announcement{% endblock %}
 
 {% block breadcrumb %}
- <a href="{{ url_for('announcements.index') }}">Announcements</a>
- <span aria-hidden="true">/</span>
- <span>New</span>
+<a href="{{ url_for('announcements.index') }}">Announcements</a>
+<span aria-hidden="true">/</span>
+<span>New</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
- <div>
- <h1>New announcement</h1>
- <p class="subtitle">
-      Everyone in scope is notified in the application. Keep it specific — a notice
-      that says what changed and what it means for the reader is the one people act on.
- </p>
- </div>
+     <div>
+          <h1>New announcement</h1>
+          <p class="subtitle">
+               Everyone in scope is notified in the application. Keep it specific — a notice
+               that says what changed and what it means for the reader is the one people act on.
+          </p>
+     </div>
 </div>
 
 <form method="post" action="{{ url_for('announcements.create') }}" style="max-width:820px;">
- <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
- <section class="panel">
- <div class="panel-head"><h2>The notice</h2></div>
- <div class="panel-body">
+     <section class="panel">
+          <div class="panel-head">
+               <h2>The notice</h2>
+          </div>
+          <div class="panel-body">
 
- <div class="field">
- <label for="title">Title <span class="tone-critical" aria-hidden="true">*</span></label>
- <input id="title" name="title" type="text" required minlength="4" maxlength="200"
-               value="{{ request.form.get('title', '') }}">
- </div>
+               <div class="field">
+                    <label for="title">Title <span class="tone-critical" aria-hidden="true">*</span></label>
+                    <input id="title" name="title" type="text" required minlength="4" maxlength="200"
+                         value="{{ request.form.get('title', '') }}">
+               </div>
 
- <div class="field">
- <label for="body">Body <span class="tone-critical" aria-hidden="true">*</span></label>
- <textarea id="body" name="body" rows="10" required minlength="10" maxlength="20000"
-                placeholder="Plain text. Line breaks are preserved.">{{ request.form.get('body', '') }}</textarea>
- <p class="field-hint">
-          Written as plain text. Links are shown as written and are not made clickable.
- </p>
- </div>
+               <div class="field">
+                    <label for="body">Body <span class="tone-critical" aria-hidden="true">*</span></label>
+                    <textarea id="body" name="body" rows="10" required minlength="10" maxlength="20000"
+                         placeholder="Plain text. Line breaks are preserved.">{{ request.form.get('body', '') }}</textarea>
+                    <p class="field-hint">
+                         Written as plain text. Links are shown as written and are not made clickable.
+                    </p>
+               </div>
 
- <div class="grid-2">
- <div class="field">
- <label for="scope">Who should see this?</label>
- <select id="scope" name="scope">
- <option value="COMPANY">Everyone in the company</option>
- <option value="PROJECT">Members of one project</option>
- </select>
- </div>
+               <div class="grid-2">
+                    <div class="field">
+                         <label for="scope">Who should see this?</label>
+                         <select id="scope" name="scope">
+                              <option value="COMPANY">Everyone in the company</option>
+                              <option value="PROJECT">Members of one project</option>
+                         </select>
+                    </div>
 
- <div class="field">
- <label for="project_id">Project (when scoped to one)</label>
- <select id="project_id" name="project_id">
- <option value="">—</option>
-          {% for project in projects %}
- <option value="{{ project.id }}">{{ project.name }}</option>
-          {% endfor %}
- </select>
- </div>
+                    <div class="field">
+                         <label for="project_id">Project (when scoped to one)</label>
+                         <select id="project_id" name="project_id">
+                              <option value="">—</option>
+                              {% for project in projects %}
+                              <option value="{{ project.id }}">{{ project.name }}</option>
+                              {% endfor %}
+                         </select>
+                    </div>
 
- <div class="field">
- <label for="expires_at">Stop showing after</label>
- <input id="expires_at" name="expires_at" type="date">
- <p class="field-hint">Optional. Useful for time-bound notices.</p>
- </div>
+                    <div class="field">
+                         <label for="expires_at">Stop showing after</label>
+                         <input id="expires_at" name="expires_at" type="date">
+                         <p class="field-hint">Optional. Useful for time-bound notices.</p>
+                    </div>
 
- <div class="field">
- <label>Options</label>
- <label class="checkbox-line" for="is_pinned">
- <input type="checkbox" id="is_pinned" name="is_pinned" value="1">
- <span>Pin to the top of the list</span>
- </label>
- <label class="checkbox-line mt-2" for="is_recognition">
- <input type="checkbox" id="is_recognition" name="is_recognition" value="1">
- <span>This is a recognition notice — mark it so it appears in the person's history</span>
- </label>
- </div>
- </div>
- </div>
+                    <div class="field">
+                         <label>Options</label>
+                         <label class="checkbox-line" for="is_pinned">
+                              <input type="checkbox" id="is_pinned" name="is_pinned" value="1">
+                              <span>Pin to the top of the list</span>
+                         </label>
+                         <label class="checkbox-line mt-2" for="is_recognition">
+                              <input type="checkbox" id="is_recognition" name="is_recognition" value="1">
+                              <span>This is a recognition notice — mark it so it appears in the person's history</span>
+                         </label>
+                    </div>
+               </div>
+          </div>
 
- <div class="panel-foot">
- <div class="btn-row">
- <button type="submit" class="btn btn-primary">Publish</button>
- <a class="btn btn-ghost" href="{{ url_for('announcements.index') }}">Cancel</a>
- </div>
- </div>
- </section>
+          <div class="panel-foot">
+               <div class="btn-row">
+                    <button type="submit" class="btn btn-primary">Publish</button>
+                    <a class="btn btn-ghost" href="{{ url_for('announcements.index') }}">Cancel</a>
+               </div>
+          </div>
+     </section>
 </form>
 {% endblock %}

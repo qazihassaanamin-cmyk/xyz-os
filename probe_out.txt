@@ -1,0 +1,23 @@
+﻿GET /login -> 200
+token found: True
+POST /login -> 401
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="csrf-token" content="ImQ1ZDM2ZDdmYjE3ZTgyYTFlOTY2ZjYzNDc5Zjk1YjE0M2U4NWRiMzAi.atOQkw.fuRrw4wiIJQZgXLVwrZbDdcxjZ0">
+ <meta name="robots" content="noindex, nofollow, noarchive">
+ <title>Sign in � Tavryc</title>
+ <link rel="stylesheet" href="/static/css/tokens.css">
+ <link rel="stylesheet" href="/static/css/base.css">
+ <link rel="stylesheet" href="/static/css/components.css">
+ <link rel="stylesheet" href="/static/css/layout.css">
+ <link rel="stylesheet" href="/static/css/responsive.css">
+</head>
+<body>
+<div class="auth-shell">
+ <a class="auth-brand" href="/login">
+    <span class="wordmark">Tavryc</span>
+    <span class="tagline"

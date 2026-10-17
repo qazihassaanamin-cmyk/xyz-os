@@ -231,3 +231,71 @@ def members():
         start=start,
         end=end,
     )
+
+
+# ---------------------------------------------------------------------------
+# Founders
+# ---------------------------------------------------------------------------
+
+@bp.route("/founders")
+@login_required
+@ceo_required
+def founders():
+    """The four founding members and their official responsibilities.
+
+    This is the company record: who the founders are, what they are responsible
+    for, and the disclaimer that applies to each role. It is a single page so
+    the four profiles can be read together rather than across four separate
+    profile screens.
+    """
+    from app.founders import FOUNDERS
+
+    rows = []
+    for spec in FOUNDERS:
+        user = User.query.filter(
+            db.or_(
+                db.func.lower(User.email) == spec["identifier"].lower(),
+                db.func.lower(User.username) == spec["username"].lower(),
+            )
+        ).first()
+        rows.append({"spec": spec, "user": user})
+
+    return render_template(
+        "ceo/founders.html",
+        page_title="Founders",
+        rows=rows,
+    )
+
+
+@bp.route("/<username>/functions", methods=["POST"])
+@login_required
+@ceo_required
+@limiter.limit("30 per hour")
+def set_functions(username: str):
+    """Set the functions a member performs inside the company.
+
+    Free text, not an enum: the brief's responsibilities differ per founder,
+    so a single column is more honest than a new value per person.
+    """
+    from app.team import _get_member_or_404
+
+    user = _get_member_or_404(username)
+    functions = (request.form.get("functions") or "").strip()[:2000] or None
+
+    before = user.functions
+    user.functions = functions
+    db.session.commit()
+
+    from app.services.audit_service import record_audit
+
+    record_audit(
+        "member.functions_updated",
+        entity_type="user",
+        entity_id=user.id,
+        summary=f"Functions updated for {user.username}",
+        before=before,
+        after=functions,
+        user_id=current_user.id,
+    )
+    flash("Functions recorded.", "success")
+    return redirect(url_for("team.profile", username=user.username, tab="overview"))

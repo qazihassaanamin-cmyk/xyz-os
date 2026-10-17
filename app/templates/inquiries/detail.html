@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+{% from "partials/_status_pill.html" import status_pill %}
+
+{% block title %}{{ inquiry.subject }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('inquiries.index') }}">Inquiries</a>
+<span aria-hidden="true">/</span>
+<span>{{ inquiry.subject|truncate(48) }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ inquiry.subject }}</h1>
+        <p class="subtitle">
+            Raised by {{ inquiry.raised_by.display_name if inquiry.raised_by else "—" }}
+            {% if inquiry.addressed_to %}· to {{ inquiry.addressed_to.display_name }}{% else %}· company-wide{% endif %}
+            · {{ inquiry.created_at|localdate("%d %b %Y") }}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-ghost" href="{{ url_for('inquiries.index') }}">Back to board</a>
+        {% if is_ceo %}
+        <a class="btn btn-ghost" href="{{ url_for('inquiries.new') }}">Raise another</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="split">
+    <div class="stack-4">
+        {# --- The question --- #}
+        <section class="panel">
+            <div class="panel-head">
+                <h2>The question</h2>
+                <span class="trail">{{ status_pill(inquiry.status) }}</span>
+            </div>
+            <div class="panel-body">
+                <p class="lede">{{ inquiry.body }}</p>
+                <dl class="facts mt-6">
+                    <div class="fact">
+                        <dt>Raised by</dt>
+                        <dd>{{ inquiry.raised_by.display_name if inquiry.raised_by else "—" }}</dd>
+                    </div>
+                    <div class="fact">
+                        <dt>Addressed to</dt>
+                        <dd>{{ inquiry.addressed_to.display_name if inquiry.addressed_to else "Company-wide" }}</dd>
+                    </div>
+                    <div class="fact">
+                        <dt>Replies</dt>
+                        <dd>{{ inquiry.replies|length }}</dd>
+                    </div>
+                    {% if inquiry.resolved_at %}
+                    <div class="fact">
+                        <dt>Resolved</dt>
+                        <dd>{{ inquiry.resolved_at|relative }}{% if inquiry.resolved_by %} by {{ inquiry.resolved_by.display_name }}{% endif %}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </section>
+
+        {# --- Replies --- #}
+        <section class="panel">
+            <div class="panel-head">
+                <h2>Replies</h2>
+                <span class="count">{{ inquiry.replies|length }}</span>
+            </div>
+            <div class="panel-body">
+                {% if inquiry.replies %}
+                <ul class="stack-4" style="padding:0;margin:0;">
+                    {% for reply in inquiry.replies %}
+                    <li class="panel" style="border:0;background:var(--bg-surface);">
+                        <div class="panel-body">
+                            <div class="row row-tight mb-2">
+                                <span class="pill no-dot">{{ reply.author.display_name if reply.author else "Former member" }}</span>
+                                <span class="tiny dim">{{ reply.created_at|relative }}</span>
+                            </div>
+                            <p class="small mb-0" style="white-space:pre-wrap;">{{ reply.body }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                    {{ empty_state("No replies yet", "The founder has been asked for a written reply.") }}
+                {% endif %}
+            </div>
+        </section>
+
+        {# --- Resolution note --- #}
+        {% if inquiry.resolution_note %}
+        <section class="panel">
+            <div class="panel-head"><h2>Resolution</h2></div>
+            <div class="panel-body">
+                <p class="small mb-0" style="white-space:pre-wrap;">{{ inquiry.resolution_note }}</p>
+                {% if inquiry.resolved_by %}
+                <p class="tiny dim mt-2">Recorded by {{ inquiry.resolved_by.display_name }}.</p>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <aside class="rail stack-4">
+        {# --- Status history --- #}
+        <section class="panel">
+            <div class="panel-head"><h2>Status history</h2></div>
+            <div class="panel-body">
+                {% if inquiry.status_events %}
+                <ul class="stack-3" style="padding-left:20px;margin:0;">
+                    {% for event in inquiry.status_events %}
+                    <li class="small">
+                        <span class="pill pill-{{ event.to_status|lower }}">{{ event.to_status|replace("_", " ")|title }}</span>
+                        <span class="dim tiny">{{ event.created_at|relative }}</span>
+                        {% if event.actor %}<span class="dim tiny">· {{ event.actor.display_name }}</span>{% endif %}
+                        {% if event.note %}<span class="dim tiny">· {{ event.note }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="small dim mb-0">No status changes recorded.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        {# --- Actions --- #}
+        {% if can_reply %}
+        <section class="panel">
+            <div class="panel-head"><h2>Reply</h2></div>
+            <div class="panel-body">
+                <form method="post" action="{{ url_for('inquiries.reply', inquiry_id=inquiry.id) }}" class="stack-3">
+                    <div class="field">
+                        <label for="body">Your written reply</label>
+                        <textarea id="body" name="body" rows="5" maxlength="4000" required
+                                  placeholder="Answer the question. Be specific, because the record is read by every member."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Record reply</button>
+                </form>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if can_close %}
+        <section class="panel">
+            <div class="panel-head"><h2>Close inquiry</h2></div>
+            <div class="panel-body">
+                <form method="post" action="{{ url_for('inquiries.close', inquiry_id=inquiry.id) }}" class="stack-3">
+                    <div class="field">
+                        <label for="note">Closing note</label>
+                        <textarea id="note" name="note" rows="3" maxlength="2000"
+                                  placeholder="Optional. Why is this inquiry now closed?"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-ghost btn-block">Close inquiry</button>
+                </form>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if is_ceo and inquiry.status != 'closed' and inquiry.status != 'resolved' %}
+        <section class="panel">
+            <div class="panel-head"><h2>Mark resolved</h2></div>
+            <div class="panel-body">
+                <form method="post" action="{{ url_for('inquiries.resolve', inquiry_id=inquiry.id) }}" class="stack-3">
+                    <div class="field">
+                        <label for="resolution_note">Resolution note</label>
+                        <textarea id="resolution_note" name="resolution_note" rows="3" maxlength="2000"
+                                  placeholder="What was the outcome? This is recorded on the inquiry."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Mark resolved</button>
+                </form>
+            </div>
+        </section>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

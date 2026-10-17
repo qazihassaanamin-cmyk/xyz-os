@@ -143,7 +143,7 @@
  </thead>
  <tbody>
       {% for task in tasks %}
-        {{ task_row(task, show_project=(view in ['team', 'created']), show_assignee=(view != 'assigned')) }}
+        {{ task_row(task, current_user, show_project=(view in ['team', 'created']), show_assignee=(view != 'assigned')) }}
       {% endfor %}
  </tbody>
  </table>

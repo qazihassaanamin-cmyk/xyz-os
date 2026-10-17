@@ -9,12 +9,25 @@ name is kept only for display and for the download's Content-Disposition.
 from __future__ import annotations
 
 import os
+from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import BigInteger, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.base import TimestampMixin, utcnow
+
+
+class ProgressStage(str, Enum):
+    """Optional context attached to evidence: where the work stood."""
+
+    STARTED = "STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+    def __str__(self) -> str:  # pragma: no cover - display helper
+        return str(self.value)
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | {".pdf", ".txt", ".md", ".csv", ".json", ".zip", ".doc", ".docx", ".xls", ".xlsx"}
@@ -41,6 +54,18 @@ class Attachment(TimestampMixin, db.Model):
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     sha256: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     caption: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Intrinsic dimensions for images, so a gallery can reserve layout space
+    # before the bytes arrive instead of reflowing as each thumbnail loads.
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Where the work stood when the evidence was captured. This is context for a
+    # reviewer, never a claim about time spent.
+    progress_stage: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    # Soft delete: a removed file is hidden and logged, then purged on a schedule.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     # Avatar images are profile pictures, not task evidence.
     is_avatar: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
 

@@ -1,0 +1,81 @@
+FFFFFFF.......................................FFF.F.....FFFFFFF.FFFFF... [ 55%]
+.....F........FF.....F..........................F......FF.               [100%]
+================================== FAILURES ===================================
+C:\Users\QaziH\xyz-os\tests\test_auth.py:25: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:34: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:40: assert 400 == 401
+C:\Users\QaziH\xyz-os\tests\test_auth.py:54: assert 'Incorrect username or password' in '<!doctype html>\n<html lang=en>\n<title>Redirecting...</title>\n<h1>Redirecting...</h1>\n<p>You should be redirected automatically to the target URL: <a href="/login">/login</a>. If not, click the link.\n'
+C:\Users\QaziH\xyz-os\tests\test_auth.py:60: assert None is not None
+C:\Users\QaziH\xyz-os\tests\test_auth.py:69: assert 400 == 401
+C:\Users\QaziH\xyz-os\tests\test_auth.py:80: assert 400 == 401
+C:\Users\QaziH\xyz-os\tests\test_auth.py:154: AssertionError: assert 302 == 401
+C:\Users\QaziH\xyz-os\tests\test_auth.py:159: assert 302 == 200
+C:\Users\QaziH\xyz-os\tests\test_auth.py:164: AssertionError: assert 302 == 405
+C:\Users\QaziH\xyz-os\tests\test_auth.py:173: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:231: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:231: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:231: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:231: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:231: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:231: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:242: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:262: AssertionError: assert '/dashboard/ceo' in '/login'
+C:\Users\QaziH\xyz-os\tests\test_auth.py:270: AssertionError: assert False
+C:\Users\QaziH\xyz-os\tests\test_auth.py:286: AssertionError: assert '/projects' in '/login'
+C:\Users\QaziH\xyz-os\tests\test_auth.py:294: AssertionError: assert 'remember_token' in 'tavryc_session=.eJwVyUsOgjAQANCrTGZNyPCLyCncGkNIS6fSiJTM1KAh3F1dvcXbcfCz0YkVu9uOkH4gi0TBDK_xJaCsGuIC_F6DsIMokCYGH-UJm...k-OAFO_Rlw44KKs9M1Foq2JVj48i3XNnW2qoeT0VVEx5fEVA0Tg.atOm3w.zNM3FkSRjpN2OCVHmGFIVhAWsQY; HttpOnly; Path=/; SameSite=Lax'
+C:\Users\QaziH\xyz-os\tests\test_auth.py:305: assert 'If that email address belongs to a member' in '<!doctype html>\n<html lang=en>\n<title>Redirecting...</title>\n<h1>Redirecting...</h1>\n<p>You should be redirected automatically to the target URL: <a href="/login">/login</a>. If not, click the link.\n'
+C:\Users\QaziH\xyz-os\tests\test_auth.py:422: assert 400 == 302
+C:\Users\QaziH\xyz-os\tests\test_auth.py:466: assert 400 == 200
+C:\Users\QaziH\xyz-os\tests\test_auth.py:480: AssertionError: assert False
+C:\Users\QaziH\xyz-os\tests\test_models.py:116: AssertionError: suggestions is missing ['decline_reason']
+C:\Users\QaziH\xyz-os\tests\test_models.py:373: AssertionError: assert {'deadline_ke...uality_first'} <= {'checkin_wee...ockdown', ...}
+C:\Users\QaziH\xyz-os\app\services\xp_service.py:318: app.services.xp_service.XpError: Unknown XP rule: MANUAL_AWARD
+C:\Users\QaziH\xyz-os\tests\test_models.py:475: AssertionError: assert {'audit_log',...transactions'} <= set()
+============================== warnings summary ===============================
+tests/test_auth.py: 82 warnings
+tests/test_models.py: 40 warnings
+  C:\Users\QaziH\xyz-os\tests\conftest.py:60: DeprecationWarning: 'get_engine' is deprecated and will be removed in Flask-SQLAlchemy 3.2. Use 'engine' or 'engines[key]' instead. If you're using Flask-Migrate or Alembic, you'll need to update your 'env.py' file.
+    _db.get_engine().dispose()
+
+tests/test_auth.py: 82 warnings
+tests/test_models.py: 40 warnings
+  C:\Users\QaziH\xyz-os\.venv\Lib\site-packages\flask_sqlalchemy\extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: submissions, tasks; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_models.py::TestMigrations::test_initial_migration_exists_and_creates_the_schema
+tests/test_models.py::TestMigrations::test_initial_migration_exists_and_creates_the_schema
+  C:\Users\QaziH\xyz-os\migrations\env.py:21: DeprecationWarning: 'get_engine' is deprecated and will be removed in Flask-SQLAlchemy 3.2. Use 'engine' or 'engines[key]' instead. If you're using Flask-Migrate or Alembic, you'll need to update your 'env.py' file.
+    return current_app.extensions['migrate'].db.get_engine()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_auth.py::TestLogin::test_valid_login_by_username - assert 4...
+FAILED tests/test_auth.py::TestLogin::test_valid_login_by_email - assert 400 ...
+FAILED tests/test_auth.py::TestLogin::test_wrong_password_is_rejected_generically
+FAILED tests/test_auth.py::TestLogin::test_unknown_user_gives_the_same_message
+FAILED tests/test_auth.py::TestLogin::test_failed_attempt_is_recorded - asser...
+FAILED tests/test_auth.py::TestLogin::test_deactivated_user_cannot_sign_in - ...
+FAILED tests/test_auth.py::TestLogin::test_lockout_after_repeated_failures - ...
+FAILED tests/test_auth.py::TestSession::test_anonymous_lounge_poll_gets_401
+FAILED tests/test_auth.py::TestSession::test_authenticated_user_reaches_the_dashboard
+FAILED tests/test_auth.py::TestSession::test_logout_requires_post - Assertion...
+FAILED tests/test_auth.py::TestSession::test_logout_with_csrf_clears_the_session
+FAILED tests/test_auth.py::TestRedirectSafety::test_hostile_next_is_ignored[https://evil.example.com/steal]
+FAILED tests/test_auth.py::TestRedirectSafety::test_hostile_next_is_ignored[//evil.example.com/steal]
+FAILED tests/test_auth.py::TestRedirectSafety::test_hostile_next_is_ignored[http://evil.example.com]
+FAILED tests/test_auth.py::TestRedirectSafety::test_hostile_next_is_ignored[/\\evil.example.com]
+FAILED tests/test_auth.py::TestRedirectSafety::test_hostile_next_is_ignored[\\\\evil.example.com]
+FAILED tests/test_auth.py::TestRedirectSafety::test_hostile_next_is_ignored[javascript:alert(1)]
+FAILED tests/test_auth.py::TestRedirectSafety::test_safe_relative_next_is_honoured
+FAILED tests/test_auth.py::TestRoleRedirects::test_ceo_lands_on_the_command_centre
+FAILED tests/test_auth.py::TestRoleRedirects::test_plain_member_lands_on_their_dashboard
+FAILED tests/test_auth.py::TestRoleRedirects::test_project_lead_lands_on_projects
+FAILED tests/test_auth.py::TestRoleRedirects::test_remember_me_sets_a_remember_cookie
+FAILED tests/test_auth.py::TestPasswordReset::test_request_does_not_reveal_whether_an_account_exists
+FAILED tests/test_auth.py::TestInvitations::test_accepting_an_invitation_signs_the_member_in
+FAILED tests/test_auth.py::TestPasswordStorage::test_change_password_requires_the_current_one
+FAILED tests/test_auth.py::TestPasswordStorage::test_change_password_updates_the_hash
+FAILED tests/test_models.py::TestSchema::test_required_columns_are_present[suggestions-columns1]
+FAILED tests/test_models.py::TestConfiguration::test_achievement_catalogue_is_seeded
+FAILED tests/test_models.py::TestCli::test_xp_reconcile_rebuilds_from_the_ledger
+FAILED tests/test_models.py::TestMigrations::test_initial_migration_exists_and_creates_the_schema

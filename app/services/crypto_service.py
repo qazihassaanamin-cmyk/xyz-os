@@ -38,10 +38,38 @@ _hasher = PasswordHasher(
     salt_len=16,
 )
 
+# A deliberately cheap hasher used only when the operator opts in, via the
+# ``FAST_PASSWORD_HASHING`` flag. It is never suitable for a real deployment:
+# it is fast enough to brute force offline. Tests set it so the suite does not
+# spend its time waiting on Argon2.
+_fast_hasher = PasswordHasher(
+    time_cost=1,
+    memory_cost=8192,    # 8 MiB
+    parallelism=1,
+    hash_len=32,
+    salt_len=16,
+)
+
+
+def _active_hasher() -> PasswordHasher:
+    """The hasher used for new hashes.
+
+    ``FAST_PASSWORD_HASHING`` is a deliberate opt-in for the test suite. It is
+    never suitable for a real deployment: it is fast enough to brute force
+    offline, so it must never be left on outside of tests.
+    """
+    try:
+        if current_app.config.get("FAST_PASSWORD_HASHING", False):
+            return _fast_hasher
+    except RuntimeError:
+        pass
+    return _hasher
+
 MIN_PASSWORD_LENGTH = 12
 
 # Hashed once at import time; used for constant-time behaviour on unknown users.
-_DUMMY_HASH = _hasher.hash("tavryc-dummy-password-never-used-for-login")
+_SLOW_DUMMY_HASH = _hasher.hash("tavryc-dummy-password-never-used-for-login")
+_FAST_DUMMY_HASH = _fast_hasher.hash("tavryc-dummy-password-never-used-for-login")
 
 COMMON_PASSWORDS = {
     "password", "password1", "password123", "passw0rd", "123456", "12345678",
@@ -57,7 +85,37 @@ class PasswordError(ValueError):
 
 
 def hash_password(raw_password: str) -> str:
-    return _hasher.hash(raw_password)
+    return _active_hasher().hash(raw_password)
+
+
+def _hasher_for(stored_hash: str) -> PasswordHasher:
+    """Pick the hasher that matches the parameters encoded in ``stored_hash``.
+
+    Argon2 encodes its parameters in the hash string itself
+    (``$argon2id$v=19$m=<mem>,t=<time>,p=<par>``), so a hash produced by the
+    cheap test hasher verifies against the cheap hasher and a production hash
+    against the production hasher. This keeps verification fast in the test
+    suite without weakening anything that reaches a real deployment.
+    """
+    if not stored_hash.startswith("$argon2"):
+        return _hasher
+    try:
+        params = stored_hash.split("$", 3)[-1]
+        mem = time_cost = par = None
+        for piece in params.split(","):
+            key, _, value = piece.partition("=")
+            if key == "m":
+                mem = int(value)
+            elif key == "t":
+                time_cost = int(value)
+            elif key == "p":
+                par = int(value)
+        if mem is not None and time_cost is not None and par is not None:
+            if mem == _fast_hasher.memory_cost and time_cost == _fast_hasher.time_cost and par == _fast_hasher.parallelism:
+                return _fast_hasher
+    except (ValueError, IndexError):
+        pass
+    return _hasher
 
 
 def verify_password(stored_hash: str, raw_password: str) -> bool:
@@ -67,8 +125,9 @@ def verify_password(stored_hash: str, raw_password: str) -> bool:
         return False
 
     if stored_hash.startswith("$argon2"):
+        hasher = _hasher_for(stored_hash)
         try:
-            return _hasher.verify(stored_hash, raw_password)
+            return hasher.verify(stored_hash, raw_password)
         except VerifyMismatchError:
             return False
         except (VerificationError, InvalidHashError):
@@ -92,7 +151,11 @@ def verify_password(stored_hash: str, raw_password: str) -> bool:
 def _dummy_verify() -> None:
     """Burn comparable CPU time so unknown users are not distinguishable."""
     try:
-        _hasher.verify(_DUMMY_HASH, "not-the-right-password")
+        hasher = _active_hasher()
+        if hasher is _fast_hasher:
+            _fast_hasher.verify(_FAST_DUMMY_HASH, "not-the-right-password")
+        else:
+            _hasher.verify(_SLOW_DUMMY_HASH, "not-the-right-password")
     except Exception:
         pass
 
@@ -102,7 +165,7 @@ def password_needs_rehash(stored_hash: str) -> bool:
         return True
     if stored_hash.startswith("$argon2"):
         try:
-            return _hasher.check_needs_rehash(stored_hash)
+            return _hasher_for(stored_hash).check_needs_rehash(stored_hash)
         except InvalidHashError:
             return True
     # Any non-Argon2 hash is upgraded on next successful login.

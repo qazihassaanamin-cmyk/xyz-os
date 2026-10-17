@@ -1,10 +1,10 @@
 {# Empty state. Says what the thing is for and what to do next, without slogans. #}
 {% macro empty_state(title, guidance, action_url=None, action_label=None) %}
 <div class="empty">
- <p class="empty-title">{{ title }}</p>
- <p>{{ guidance }}</p>
+  <p class="empty-title">{{ title }}</p>
+  <p>{{ guidance }}</p>
   {% if action_url and action_label %}
-    <a class="btn" href="{{ action_url }}">{{ action_label }}</a>
+  <a class="btn" href="{{ action_url }}">{{ action_label }}</a>
   {% endif %}
 </div>
 {% endmacro %}

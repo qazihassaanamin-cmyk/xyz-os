@@ -49,7 +49,7 @@ from app.services import task_service, upload_service
 from app.services.audit_service import record_audit
 from app.utils.dates import company_today, deadline_label, humanise_seconds
 from app.utils.pagination import paginate
-from app.utils.validators import ValidationError, optional_text, parse_date
+from app.utils.validators import ValidationError, nulls_last_asc, optional_text, parse_date
 
 bp = Blueprint("tasks", __name__)
 
@@ -157,7 +157,7 @@ def index():
             (Task.status == TaskStatus.TODO.value, 3),
             else_=4,
         ),
-        Task.due_date.asc().nulls_last(),
+        *nulls_last_asc(Task.due_date),
         Task.priority.desc(),
     )
 

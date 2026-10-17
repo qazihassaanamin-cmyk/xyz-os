@@ -29,7 +29,21 @@
       Completed {{ task.completed_at|localdate("%d %b") if task.completed_at else "" }}
     </span>
   {% elif task.due_date %}
-    <span class="due due-{{ task.due_state }}">{{ deadline_label(task.due_date) }}</span>
+    {% set state = task.due_state %}
+    {% set delta = (task.due_date - company_today()).days %}
+    <span class="due due-{{ state }}">
+      {%- if state == "overdue" -%}
+        {{ delta|abs }} day{{ '' if delta|abs == 1 else 's' }} overdue
+      {%- elif state == "today" -%}
+        Due today
+      {%- elif state == "soon" -%}
+        Due in {{ delta }} day{{ '' if delta == 1 else 's' }}
+      {%- elif state == "later" -%}
+        Due in {{ delta }} day{{ '' if delta == 1 else 's' }}
+      {%- else -%}
+        No deadline
+      {%- endif -%}
+    </span>
   {% else %}
     <span class="due due-none">No deadline</span>
   {% endif %}

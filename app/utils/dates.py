@@ -145,3 +145,20 @@ def deadline_label(due: date | None) -> str:
     if delta < 0:
         return f"{abs(delta)} days overdue"
     return f"Due in {delta} days"
+
+
+def parse_iso(value: str) -> datetime | None:
+    """Parse an ISO-8601 timestamp, tolerating the SQLite 'Z' suffix and
+    space-separated forms. Returns None when the string cannot be parsed.
+    """
+    if not value:
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    if " " in text and "T" not in text:
+        text = text.replace(" ", "T", 1)
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None

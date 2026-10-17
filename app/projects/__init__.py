@@ -26,7 +26,7 @@ from app.permissions import (
 from app.services import project_service, report_service, task_service, upload_service
 from app.utils.dates import company_today, deadline_label
 from app.utils.pagination import paginate
-from app.utils.validators import ValidationError, parse_date
+from app.utils.validators import ValidationError, nulls_last_asc, parse_date
 
 bp = Blueprint("projects", __name__)
 
@@ -117,7 +117,7 @@ def detail(project_id: int):
         task_query = task_query.filter(
             Task.status.notin_([TaskStatus.CANCELLED.value])
         )
-    task_query = task_query.order_by(Task.status.asc(), Task.due_date.asc().nulls_last())
+    task_query = task_query.order_by(Task.status.asc(), *nulls_last_asc(Task.due_date))
     pagination = paginate(task_query, per_page=25)
 
     return render_template(

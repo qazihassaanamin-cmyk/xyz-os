@@ -32,12 +32,12 @@ class LoungeError(Exception):
     """A refused Lounge operation, with a member-safe message."""
 
 
-def visible_query(*, topic: str | None = None, include_hidden: bool = False):
+def visible_query(*, room_id=None, include_hidden: bool = False):
     query = LoungePost.query.filter(LoungePost.parent_id.is_(None))
     if not include_hidden:
         query = query.filter(LoungePost.is_hidden.is_(False))
-    if topic and topic != "all":
-        query = query.filter(LoungePost.topic == topic)
+    if room_id is not None:
+        query = query.filter(LoungePost.room_id == room_id)
     return query
 
 
@@ -189,7 +189,9 @@ def fetch_messages(
     limit = max(1, min(int(limit or PAGE_SIZE), MAX_PAGE_SIZE))
     include_hidden = viewer is not None and getattr(viewer, "is_ceo", False)
 
-    query = visible_query(topic=topic, include_hidden=include_hidden)
+    query = visible_query(include_hidden=include_hidden)
+    if topic:
+        query = query.filter(LoungePost.topic == topic)
 
     if after_id:
         query = query.filter(LoungePost.id > int(after_id)).order_by(LoungePost.id.asc())
