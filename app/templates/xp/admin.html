@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import xp_amount %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Rewards configuration{% endblock %}
+
+{% block breadcrumb %}<span>Rewards configuration</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Rewards configuration</h1>
+ <p class="subtitle">
+      The XP economy ships fully configured. Everything here is an adjustment, not a
+      requirement — the system works correctly whether or not this page is ever opened.
+ </p>
+ </div>
+ <div class="page-actions">
+ <form method="post" action="{{ url_for('xp.recompute') }}"
+          data-confirm="Rebuild every member's balance from the ledger? This is safe and does not change any award.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn">Recompute balances</button>
+ </form>
+ </div>
+</div>
+
+{% if anomalies %}
+<div class="alert alert-warning" role="status">
+ <div class="alert-body">
+ <strong>{{ anomalies|length }} pattern{{ "s" if anomalies|length != 1 else "" }} worth a look</strong>
+ <span class="small">
+        These are signals, not accusations. They usually mean a rule needs tuning or
+        a task's difficulty was set too high, not that anyone acted in bad faith.
+      </span>
+ </div>
+</div>
+{% endif %}
+
+<nav class="view-tabs" aria-label="Configuration sections">
+ <a class="view-tab" href="#rules">Award rules</a>
+ <a class="view-tab" href="#levels">Levels</a>
+ <a class="view-tab" href="#adjustments">Adjustments</a>
+ <a class="view-tab" href="#challenges">Challenges</a>
+</nav>
+
+{# ==================== RULES =========================================== #}
+<section class="panel" id="rules">
+ <div class="panel-head">
+ <h2>Award rules</h2>
+ <span class="count">{{ rules|length }} rules</span>
+ </div>
+ <p class="panel-body" style="padding-bottom:0;">
+ <span class="small muted">
+      Disabling a rule stops future awards of that type. It never removes XP already
+      granted, and it never touches the ledger.
+    </span>
+ </p>
+
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <caption>Difficulty multipliers apply to task awards: Small 40%, Medium 100%, Large 200%, Critical 350%.</caption>
+ <thead>
+ <tr>
+ <th scope="col">Rule</th>
+ <th scope="col">What it rewards</th>
+ <th scope="col" class="num">Points</th>
+ <th scope="col" class="num">Daily cap</th>
+ <th scope="col">Enabled</th>
+ <th scope="col"><span class="visually-hidden">Action</span></th>
+ </tr>
+ </thead>
+ <tbody>
+      {% for rule in rules %}
+ <tr>
+ <td class="nowrap">
+ <span class="strong">{{ rule.label }}</span>
+ <span class="tiny dim mono" style="display:block;">{{ rule.code }}</span>
+ </td>
+ <td class="small muted">{{ rule.description or "" }}</td>
+ <td colspan="4">
+ <form method="post" action="{{ url_for('xp.update_rule', rule_id=rule.id) }}"
+                  class="row row-tight" style="align-items:flex-end;">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div>
+ <label class="visually-hidden" for="points-{{ rule.id }}">Points</label>
+ <input id="points-{{ rule.id }}" name="points" type="number" min="0" max="5000"
+                        value="{{ rule.points }}" style="width:88px;" class="numeric">
+ </div>
+ <div>
+ <label class="visually-hidden" for="cap-{{ rule.id }}">Daily cap</label>
+ <input id="cap-{{ rule.id }}" name="daily_cap" type="number" min="0"
+                        value="{{ rule.daily_cap if rule.daily_cap is not none else '' }}"
+                        placeholder="none" style="width:88px;" class="numeric">
+ </div>
+ <label class="checkbox-line" for="enabled-{{ rule.id }}" style="margin-bottom:6px;">
+ <input type="checkbox" id="enabled-{{ rule.id }}" name="is_enabled" value="1"
+                        {% if rule.is_enabled %}checked{% endif %}>
+ <span class="visually-hidden">Enabled</span>
+ </label>
+ <button type="submit" class="btn btn-sm">Save</button>
+ </form>
+ </td>
+ </tr>
+      {% endfor %}
+ </tbody>
+ </table>
+ </div>
+</section>
+
+{# ==================== LEVELS ========================================== #}
+<section class="panel" id="levels">
+ <div class="panel-head">
+ <h2>Levels</h2>
+ <span class="count">{{ levels|length }} tiers</span>
+ </div>
+ <p class="panel-body" style="padding-bottom:0;">
+ <span class="small muted">
+      Thresholds are lifetime XP. Changing one recalculates every member's level
+      immediately; nobody's XP total changes.
+    </span>
+ </p>
+
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Level</th>
+ <th scope="col">Name</th>
+ <th scope="col">Meaning</th>
+ <th scope="col" class="num">Threshold</th>
+ <th scope="col"><span class="visually-hidden">Action</span></th>
+ </tr>
+ </thead>
+ <tbody>
+      {% for level in levels %}
+ <tr>
+ <td class="nowrap numeric">{{ level.level }}</td>
+ <td colspan="4">
+ <form method="post" action="{{ url_for('xp.update_level', level_id=level.id) }}"
+                  class="row row-tight" style="align-items:flex-end;">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div>
+ <label class="visually-hidden" for="name-{{ level.id }}">Name</label>
+ <input id="name-{{ level.id }}" name="name" type="text" value="{{ level.name }}"
+                        maxlength="40" style="width:180px;">
+ </div>
+ <div class="grow">
+ <span class="small muted">{{ level.description or "" }}</span>
+ </div>
+ <div>
+ <label class="visually-hidden" for="xp-{{ level.id }}">Minimum lifetime XP</label>
+ <input id="xp-{{ level.id }}" name="min_lifetime_xp" type="number" min="0"
+                        value="{{ level.min_lifetime_xp }}" style="width:110px;" class="numeric">
+ </div>
+ <button type="submit" class="btn btn-sm">Save</button>
+ </form>
+ </td>
+ </tr>
+      {% endfor %}
+ </tbody>
+ </table>
+ </div>
+</section>
+
+{# ==================== ADJUSTMENTS ===================================== #}
+<section class="panel" id="adjustments">
+ <div class="panel-head">
+ <h2>Manual adjustments</h2>
+ <span class="count">Requires a written reason</span>
+ </div>
+ <div class="panel-body">
+ <p class="small muted">
+      Use these for corrections and for work the automatic rules cannot see — a
+      difficult recovery, a client conversation that saved a relationship. Every
+      adjustment is recorded with your name and the reason, and is visible to the
+      member it affects.
+    </p>
+
+ <div class="grid-2">
+ <form method="post" action="{{ url_for('xp.adjust') }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="adjust-user">Member</label>
+ <select id="adjust-user" name="user_id" required>
+ <option value="">Choose a member</option>
+            {% for member in members %}
+ <option value="{{ member.id }}">{{ member.display_name }}</option>
+            {% endfor %}
+ </select>
+ </div>
+ <div class="field">
+ <label for="adjust-amount">XP amount</label>
+ <input id="adjust-amount" name="amount" type="number" required
+                  min="-2000" max="2000" step="5"
+                  placeholder="Positive to award, negative to deduct">
+ <p class="field-hint">A single adjustment is limited to 2000 XP.</p>
+ </div>
+ <div class="field">
+ <label for="adjust-note">Reason <span class="tone-critical" aria-hidden="true">*</span></label>
+ <textarea id="adjust-note" name="note" rows="3" required minlength="10" maxlength="2000"
+                  placeholder="What this recognises, or what is being corrected and why."></textarea>
+ </div>
+ <button type="submit" class="btn btn-primary">Apply adjustment</button>
+ </form>
+
+ <div>
+ <p class="field-label">Recent adjustments</p>
+          {% if recent_adjustments %}
+ <ul class="stack-3" style="list-style:none;padding:0;margin:0;">
+              {% for transaction in recent_adjustments %}
+ <li>
+ <div class="ledger-row">
+ <span class="reason">
+ <span class="small">
+                      {{ transaction.user.display_name if transaction.user else "—" }}
+                      · {{ transaction.reason_label }}
+                    </span>
+ <span class="tiny dim" style="display:block;">{{ transaction.note or "" }}</span>
+ <span class="tiny dim" style="display:block;">
+                      {{ transaction.awarded_by.display_name if transaction.awarded_by else "System" }}
+                      · {{ transaction.created_at|localdatetime }}
+                      {% if transaction.reversed_by_id %}· reversed{% endif %}
+                    </span>
+ </span>
+ <span class="amount">{{ xp_amount(transaction.amount) }}</span>
+ </div>
+                  {% if transaction.amount > 0 and not transaction.reversed_by_id and not transaction.reversal_of_id %}
+ <form method="post" action="{{ url_for('xp.reverse', transaction_id=transaction.id) }}"
+                        class="mt-2" data-confirm="Reverse this award? A compensating entry is added; the original stays.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label class="visually-hidden" for="reverse-note-{{ transaction.id }}">Reason for reversal</label>
+ <input id="reverse-note-{{ transaction.id }}" name="note" type="text" required minlength="5"
+                           placeholder="Why this is being reversed" class="mb-2">
+ <button type="submit" class="btn btn-sm btn-ghost">Reverse</button>
+ </form>
+                  {% endif %}
+ </li>
+              {% endfor %}
+ </ul>
+          {% else %}
+            {{ empty_state("No manual adjustments", "Awards granted by the automatic rules are on each member's contribution page.") }}
+          {% endif %}
+ </div>
+ </div>
+ </div>
+</section>
+
+{# ==================== ANOMALIES ======================================= #}
+{% if anomalies %}
+<section class="panel">
+ <div class="panel-head">
+ <h2>Patterns worth reviewing</h2>
+ <span class="count">{{ anomalies|length }}</span>
+ </div>
+ <ul class="list">
+      {% for finding in anomalies %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">
+            {{ finding.user.display_name if finding.user else "—" }}
+ <span class="pill no-dot">{{ finding.kind|title }}</span>
+ </span>
+ <span class="meta"><span>{{ finding.detail }}</span></span>
+ </span>
+ </div>
+ </li>
+      {% endfor %}
+ </ul>
+ <div class="panel-foot">
+      Check the underlying records before acting on any of these. A member with many
+      awards is more often doing a lot of work than gaming the system.
+    </div>
+</section>
+{% endif %}
+
+{# ==================== CHALLENGES ====================================== #}
+<section class="panel" id="challenges">
+ <div class="panel-head">
+ <h2>Weekly challenges</h2>
+ </div>
+ <div class="panel-body">
+ <p class="small muted">
+      Challenges rotate automatically each week from a small set, so this page can be
+      left alone. Add one here only when you want something specific for the current
+      week.
+    </p>
+ </div>
+ <div class="panel-foot">
+ <details>
+ <summary class="small" style="cursor:pointer;">Add a challenge for this week</summary>
+ <form method="post" action="{{ url_for('xp.create_challenge') }}" class="mt-4">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="grid-2">
+ <div class="field">
+ <label for="challenge-title">Title</label>
+ <input id="challenge-title" name="title" type="text" required minlength="4" maxlength="160">
+ </div>
+ <div class="field">
+ <label for="challenge-metric">Measured from</label>
+ <select id="challenge-metric" name="metric" required>
+ <option value="TASKS_COMPLETED">Tasks accepted</option>
+ <option value="ON_TIME_DELIVERIES">On-time deliveries</option>
+ <option value="FOCUS_SESSIONS">Focus sessions completed</option>
+ <option value="CHECKIN_STREAK">Daily check-ins</option>
+ <option value="REVIEWS_COMPLETED">Reviews completed</option>
+ <option value="BLOCKERS_RESOLVED">Blockers resolved</option>
+ <option value="SUGGESTIONS_IMPLEMENTED">Suggestions implemented</option>
+ <option value="KNOWLEDGE_ENTRIES">Knowledge entries published</option>
+ </select>
+ </div>
+ <div class="field">
+ <label for="challenge-target">Target</label>
+ <input id="challenge-target" name="target_value" type="number" min="1" max="100" value="3">
+ </div>
+ <div class="field">
+ <label for="challenge-reward">Reward XP</label>
+ <input id="challenge-reward" name="reward_xp" type="number" min="0" max="500" value="60">
+ </div>
+ </div>
+ <div class="field">
+ <label for="challenge-description">Description</label>
+ <input id="challenge-description" name="description" type="text" maxlength="1000"
+                  placeholder="What completing this means">
+ </div>
+ <button type="submit" class="btn btn-primary">Create challenge</button>
+ </form>
+ </details>
+ </div>
+</section>
+{% endblock %}

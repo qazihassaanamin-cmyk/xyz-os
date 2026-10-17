@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% from "partials/_task_row.html" import task_row %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block breadcrumb %}<span>Tasks</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Tasks</h1>
+ <p class="subtitle">
+      Everything you own, review or created. Filters apply to the list below and
+      are held in the address bar so a view can be shared or bookmarked.
+ </p>
+ </div>
+ <div class="page-actions">
+    {% if current_user.is_ceo or leading_projects %}
+ <a class="btn btn-primary" href="{{ url_for('tasks.create', project=project_id) if project_id else url_for('tasks.create') }}">New task</a>
+    {% endif %}
+ </div>
+</div>
+
+<nav class="view-tabs" aria-label="Task views">
+ <a class="view-tab" href="{{ url_for('tasks.index', view='assigned') }}"
+     {% if view == 'assigned' %}aria-current="page"{% endif %}>
+    Assigned to me <span class="badge-count">{{ counts.assigned }}</span>
+ </a>
+ <a class="view-tab" href="{{ url_for('tasks.index', view='review') }}"
+     {% if view == 'review' %}aria-current="page"{% endif %}>
+    Waiting for my review <span class="badge-count">{{ counts.review }}</span>
+ </a>
+ <a class="view-tab" href="{{ url_for('tasks.index', view='created') }}"
+     {% if view == 'created' %}aria-current="page"{% endif %}>
+    I created
+ </a>
+  {% if current_user.is_ceo %}
+ <a class="view-tab" href="{{ url_for('tasks.index', view='team') }}"
+       {% if view == 'team' %}aria-current="page"{% endif %}>
+      All company work
+ </a>
+  {% endif %}
+ <a class="view-tab" href="{{ url_for('tasks.index', due='overdue') }}"
+     {% if due == 'overdue' %}aria-current="page"{% endif %}>
+    Overdue <span class="badge-count">{{ counts.overdue }}</span>
+ </a>
+</nav>
+
+<form class="filters" method="get" action="{{ url_for('tasks.index') }}">
+ <input type="hidden" name="view" value="{{ view }}">
+
+ <div class="filter filter-wide">
+ <label for="q">Search</label>
+ <input id="q" name="q" type="search" value="{{ search }}" placeholder="Title or description">
+ </div>
+
+ <div class="filter">
+ <label for="status">Status</label>
+ <select id="status" name="status">
+ <option value="">Open work</option>
+      {% for value in ["BACKLOG", "TODO", "IN_PROGRESS", "BLOCKED", "IN_REVIEW", "COMPLETED", "CANCELLED"] %}
+ <option value="{{ value }}" {% if status|upper == value %}selected{% endif %}>
+          {{ value|replace("_", " ")|title }}
+ </option>
+      {% endfor %}
+ </select>
+ </div>
+
+ <div class="filter">
+ <label for="priority">Priority</label>
+ <select id="priority" name="priority">
+ <option value="">Any</option>
+      {% for value in ["LOW", "NORMAL", "HIGH", "CRITICAL"] %}
+ <option value="{{ value }}" {% if priority|upper == value %}selected{% endif %}>{{ value|title }}</option>
+      {% endfor %}
+ </select>
+ </div>
+
+ <div class="filter">
+ <label for="project">Project</label>
+ <select id="project" name="project">
+ <option value="">All projects</option>
+      {% for project in projects %}
+ <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+      {% endfor %}
+ </select>
+ </div>
+
+ <div class="filter">
+ <label for="due">Deadline</label>
+ <select id="due" name="due">
+ <option value="">Any</option>
+ <option value="overdue" {% if due == 'overdue' %}selected{% endif %}>Overdue</option>
+ <option value="today" {% if due == 'today' %}selected{% endif %}>Due today</option>
+ <option value="week" {% if due == 'week' %}selected{% endif %}>Next 7 days</option>
+ <option value="none" {% if due == 'none' %}selected{% endif %}>No deadline</option>
+ </select>
+ </div>
+
+  {% if current_user.is_ceo %}
+ <div class="filter">
+ <label for="assignee">Member</label>
+ <select id="assignee" name="assignee">
+ <option value="">Anyone</option>
+      {% for member in members %}
+ <option value="{{ member.id }}" {% if assignee_id == member.id %}selected{% endif %}>{{ member.display_name }}</option>
+      {% endfor %}
+ </select>
+ </div>
+  {% endif %}
+
+ <div class="row row-tight">
+ <label class="checkbox-line" for="include_done">
+ <input type="checkbox" id="include_done" name="include_done" value="1" {% if include_done %}checked{% endif %}>
+ <span>Show completed</span>
+ </label>
+ <button type="submit" class="btn">Apply</button>
+ <a class="btn btn-ghost" href="{{ url_for('tasks.index', view=view) }}">Reset</a>
+ </div>
+</form>
+
+{% if tasks %}
+<div class="table-wrap">
+ <table class="data">
+ <caption>
+      {{ pagination.total }} task{{ "s" if pagination.total != 1 else "" }},
+      newest deadline first. Each row links to the full workspace.
+ </caption>
+ <thead>
+ <tr>
+ <th scope="col">Task</th>
+        {% if view == 'team' or view == 'created' %}
+ <th scope="col">Project</th>
+        {% endif %}
+        {% if view != 'assigned' %}
+ <th scope="col">Owner</th>
+        {% endif %}
+ <th scope="col">Status</th>
+ <th scope="col">Priority</th>
+ <th scope="col">Deadline</th>
+ </tr>
+ </thead>
+ <tbody>
+      {% for task in tasks %}
+        {{ task_row(task, show_project=(view in ['team', 'created']), show_assignee=(view != 'assigned')) }}
+      {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Task pages">
+ <span class="summary">
+      Showing {{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}
+ </span>
+    {% if pagination.has_prev %}
+ <a href="{{ url_for('tasks.index', view=view, page=pagination.prev_num, status=status, priority=priority, project=project_id, due=due, q=search, assignee=assignee_id, include_done='1' if include_done else None) }}">Previous</a>
+    {% endif %}
+    {% for number in pagination.window() %}
+      {% if number is none %}
+ <span class="gap">…</span>
+      {% elif number == pagination.page %}
+ <span class="page" aria-current="page">{{ number }}</span>
+      {% else %}
+ <a href="{{ url_for('tasks.index', view=view, page=number, status=status, priority=priority, project=project_id, due=due, q=search, assignee=assignee_id, include_done='1' if include_done else None) }}">{{ number }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+ <a href="{{ url_for('tasks.index', view=view, page=pagination.next_num, status=status, priority=priority, project=project_id, due=due, q=search, assignee=assignee_id, include_done='1' if include_done else None) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="panel">
+  {% if search or status or priority or project_id or due %}
+    {{ empty_state(
+      "No tasks match those filters",
+      "Try widening the filters, or clear them to see everything you have access to.",
+      url_for('tasks.index', view=view),
+      "Clear the filters"
+    ) }}
+  {% elif view == 'assigned' %}
+    {{ empty_state(
+      "Nothing is assigned to you",
+      "When the CEO or a project lead assigns work, it appears here with its brief and deadline.",
+      url_for('projects.index'),
+      "Look at the projects"
+    ) }}
+  {% elif view == 'review' %}
+    {{ empty_state(
+      "Nothing is waiting for your review",
+      "Work submitted with you as the reviewer appears here, with the evidence attached to it."
+    ) }}
+  {% else %}
+    {{ empty_state(
+      "No tasks here yet",
+      "Tasks are created by the CEO or by a project lead and then assigned to a member.",
+      url_for('projects.index') if not (current_user.is_ceo or leading_projects) else url_for('tasks.create'),
+      "Projects" if not (current_user.is_ceo or leading_projects) else "Create a task"
+    ) }}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

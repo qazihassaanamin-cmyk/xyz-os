@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Daily records{% endblock %}
+
+{% block breadcrumb %}<span>Daily records</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Daily records</h1>
+ <p class="subtitle">
+      Check-in and report compliance for
+      {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
+      Rates are measured against each member's own working days, so an approved
+      absence lowers the denominator rather than the score.
+ </p>
+ </div>
+ <div class="page-actions">
+ <form method="get" action="{{ url_for('daily.team_records') }}" class="row row-tight">
+ <label class="visually-hidden" for="days">Range</label>
+ <select id="days" name="days" style="width:auto;">
+        {% for option in [7, 14, 30, 90] %}
+ <option value="{{ option }}" {% if days == option %}selected{% endif %}>Last {{ option }} days</option>
+        {% endfor %}
+ </select>
+ <button type="submit" class="btn">Apply</button>
+ </form>
+ <a class="btn btn-ghost" href="{{ url_for('daily.workdays') }}">Workday calendar</a>
+ </div>
+</div>
+
+<div class="table-wrap">
+ <table class="data">
+ <caption>
+      {{ rows|length }} member{{ "s" if rows|length != 1 else "" }}.
+      A blank cell means no record was submitted for that period.
+ </caption>
+ <thead>
+ <tr>
+ <th scope="col">Member</th>
+ <th scope="col" class="num">Working days</th>
+ <th scope="col" class="num">Check-ins</th>
+ <th scope="col" class="num">Rate</th>
+ <th scope="col" class="num">Reports</th>
+ <th scope="col" class="num">Rate</th>
+ <th scope="col" class="num">Focus days</th>
+ <th scope="col" class="num">Focus rate</th>
+ <th scope="col" class="num">Tasks accepted</th>
+ </tr>
+ </thead>
+ <tbody>
+      {% for row in rows %}
+ <tr>
+ <td class="nowrap">
+ <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+ <span class="pill no-dot">{{ row.user.role_label }}</span>
+ </td>
+ <td class="num">{{ row.working_days }}</td>
+ <td class="num">{{ row.checkins }}</td>
+ <td class="num {% if row.checkin_rate < 60 %}tone-attention{% endif %}">{{ row.checkin_rate }}%</td>
+ <td class="num">{{ row.reports }}</td>
+ <td class="num {% if row.report_rate < 60 %}tone-attention{% endif %}">{{ row.report_rate }}%</td>
+ <td class="num">{{ row.focus_days }}</td>
+ <td class="num">{{ row.focus_rate }}%</td>
+ <td class="num">{{ row.tasks_completed }}</td>
+ </tr>
+      {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+<div class="notice mt-6">
+ <p class="field-label mb-2">Reading this table honestly</p>
+ <p class="small muted mb-0">
+      These figures describe whether the daily record was kept, not how well anyone
+      worked. A member with a low check-in rate may be blocked, unwell on approved
+      leave, or simply not have adopted the habit yet — the numbers say which is
+      worth asking about, not what the answer is.
+ </p>
+</div>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Focus history{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('focus.index') }}">Focus timer</a>
+ <span aria-hidden="true">/</span>
+ <span>History</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Focus history</h1>
+ <p class="subtitle">
+      Sessions you have run, with what each one was attached to. A recorded session
+      means the timer ran to completion; it does not measure attention or output.
+ </p>
+ </div>
+ <div class="page-actions">
+ <a class="btn btn-primary" href="{{ url_for('focus.index') }}">Back to the timer</a>
+ </div>
+</div>
+
+<div class="stat-strip mb-6">
+ <div class="stat">
+ <span class="label">Completed, 30 days</span>
+ <span class="value numeric positive">{{ stats.completed_total }}</span>
+ <span class="meta">{{ stats.total_minutes }} minutes total</span>
+ </div>
+ <div class="stat">
+ <span class="label">This week</span>
+ <span class="value numeric">{{ stats.credited_this_week }}/{{ stats.working_days_this_week }}</span>
+ <span class="meta">{{ stats.completion_rate }}% of working days</span>
+ </div>
+ <div class="stat">
+ <span class="label">Average session</span>
+ <span class="value numeric">{{ stats.average_minutes }}</span>
+ <span class="meta">minutes</span>
+ </div>
+ <div class="stat">
+ <span class="label">Interrupted</span>
+ <span class="value numeric {% if stats.interrupted_total %}attention{% endif %}">{{ stats.interrupted_total }}</span>
+ <span class="meta">{{ stats.abandoned_total }} abandoned</span>
+ </div>
+</div>
+
+<div class="split">
+ <div>
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Session log</h2>
+ <span class="count">{{ pagination.total }}</span>
+ </div>
+
+      {% if sessions %}
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Date</th>
+ <th scope="col">Started</th>
+ <th scope="col">Duration</th>
+ <th scope="col">Attached to</th>
+ <th scope="col">Status</th>
+ <th scope="col">Daily credit</th>
+ </tr>
+ </thead>
+ <tbody>
+            {% for session in sessions %}
+ <tr>
+ <td class="nowrap">{{ session.workday_date|localdate("%d %b %Y") }}</td>
+ <td class="nowrap numeric">{{ session.started_at|localdatetime("%H:%M") if session.started_at else "—" }}</td>
+ <td class="nowrap numeric">
+                {% if session.duration_seconds %}
+                  {{ humanise_seconds(session.duration_seconds) }}
+                {% elif session.is_open %}
+                  <span class="tone-positive">running</span>
+                {% else %}
+                  <span class="dim">—</span>
+                {% endif %}
+ </td>
+ <td>
+                {% if session.task %}
+ <a href="{{ url_for('tasks.detail', task_id=session.task.id) }}">{{ session.task.title|truncate(44) }}</a>
+                {% elif session.goal %}
+ <span class="dim">{{ session.goal|truncate(44) }}</span>
+                {% else %}
+ <span class="dim">—</span>
+                {% endif %}
+ </td>
+ <td class="nowrap">{{ status_pill(session.status) }}</td>
+ <td class="nowrap">
+                {% if session.credited %}
+ <span class="tone-positive">Counted</span>
+                {% elif session.status == "COMPLETED" %}
+ <span class="dim">Recorded only</span>
+                {% else %}
+ <span class="dim">—</span>
+                {% endif %}
+ </td>
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+
+ <div class="panel-foot">
+ <p class="tiny dim mb-0">
+            One completed session per working day earns the daily focus credit.
+            Additional sessions are recorded here and in your total time, but do not
+            earn a second credit.
+ </p>
+ </div>
+
+        {% if pagination.pages > 1 %}
+ <div class="panel-foot">
+ <nav class="pagination" aria-label="Session pages">
+ <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+            {% if pagination.has_prev %}
+ <a href="{{ url_for('focus.history', page=pagination.prev_num) }}">Previous</a>
+            {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+            {% if pagination.has_next %}
+ <a href="{{ url_for('focus.history', page=pagination.next_num) }}">Next</a>
+            {% endif %}
+ </nav>
+ </div>
+        {% endif %}
+
+      {% else %}
+        {{ empty_state(
+          "No focus sessions recorded yet",
+          "Start a session from the timer. The server measures the time, and a session counts once it reaches the minimum length.",
+          url_for('focus.index'),
+          "Open the timer"
+        ) }}
+      {% endif %}
+ </section>
+ </div>
+
+ <aside class="rail">
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Daily totals</h2>
+ <span class="count">Last 21 days</span>
+ </div>
+      {% if daily %}
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Date</th>
+ <th scope="col" class="num">Sessions</th>
+ <th scope="col" class="num">Minutes</th>
+ <th scope="col">Credit</th>
+ </tr>
+ </thead>
+ <tbody>
+            {% for row in daily %}
+ <tr>
+ <td class="nowrap">{{ row.date|localdate("%d %b") }}</td>
+ <td class="num">{{ row.sessions }}</td>
+ <td class="num">{{ row.minutes }}</td>
+ <td class="nowrap">
+                {% if row.credited %}
+ <span class="tone-positive">Yes</span>
+                {% else %}
+ <span class="dim">—</span>
+                {% endif %}
+ </td>
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+      {% else %}
+ <div class="panel-body">
+ <p class="muted small mb-0">No sessions in the last three weeks.</p>
+ </div>
+      {% endif %}
+ </section>
+ </aside>
+</div>
+{% endblock %}

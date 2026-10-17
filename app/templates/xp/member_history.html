@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import xp_amount %}
+
+{% block title %}Contribution history — {{ member.display_name }}{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('team.profile', username=member.username) }}">{{ member.display_name }}</a>
+ <span aria-hidden="true">/</span>
+ <span>Contribution history</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>{{ member.display_name }} — contribution history</h1>
+ <p class="subtitle">
+      Every entry in the ledger, newest first. Nothing here has been deleted: where
+      an award was reversed, the original row remains and the compensating row is
+      shown beside it.
+ </p>
+ </div>
+ <div class="page-actions">
+ <span class="pill no-dot">Level {{ profile.current_level }} · {{ profile.level_name }}</span>
+ <span class="pill no-dot">{{ profile.lifetime_xp }} XP lifetime</span>
+ </div>
+</div>
+
+<div class="table-wrap">
+ <table class="data">
+ <caption>
+      {{ pagination.total }} entr{{ "y" if pagination.total == 1 else "ies" }}.
+      Balances are recomputable from this ledger at any time.
+ </caption>
+ <thead>
+ <tr>
+ <th scope="col">When</th>
+ <th scope="col">Reason</th>
+ <th scope="col">Explanation</th>
+ <th scope="col">Source</th>
+ <th scope="col">Granted by</th>
+ <th scope="col" class="num">XP</th>
+ <th scope="col" class="num">Balance after</th>
+ </tr>
+ </thead>
+ <tbody>
+      {% for transaction in transactions %}
+ <tr>
+ <td class="nowrap small muted">{{ transaction.created_at|localdatetime }}</td>
+ <td class="nowrap">
+          {{ transaction.reason_label }}
+          {% if transaction.reversed_by_id %}<span class="pill no-dot dim">reversed</span>{% endif %}
+ </td>
+ <td>
+          {{ transaction.note or "" }}
+          {% if transaction.task %}
+ <a class="tiny" href="{{ url_for('tasks.detail', task_id=transaction.task.id) }}">the task</a>
+          {% endif %}
+          {% if transaction.project %}
+ <a class="tiny" href="{{ url_for('projects.detail', project_id=transaction.project.id) }}">the project</a>
+          {% endif %}
+ </td>
+ <td class="nowrap tiny dim">
+          {{ transaction.source_type or "—" }}
+          {% if transaction.source_id %}#{{ transaction.source_id }}{% endif %}
+ </td>
+ <td class="nowrap small muted">
+          {{ transaction.awarded_by.display_name if transaction.awarded_by else "System" }}
+ </td>
+ <td class="num">{{ xp_amount(transaction.amount) }}</td>
+ <td class="num dim">{{ transaction.balance_after if transaction.balance_after is not none else "—" }}</td>
+ </tr>
+      {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Ledger pages">
+ <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+    {% if pagination.has_prev %}
+ <a href="{{ url_for('xp.member_history', username=member.username, page=pagination.prev_num) }}">Previous</a>
+    {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+ <a href="{{ url_for('xp.member_history', username=member.username, page=pagination.next_num) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% if is_ceo %}
+<div class="notice mt-6">
+ <p class="field-label mb-2">Corrections</p>
+ <p class="small muted mb-0">
+      To correct an entry, use the reverse control on the rewards configuration page.
+      Reversing adds a compensating row and marks the original; it never rewrites
+      history, so the record of what was credited and when stays intact.
+    </p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Ideas and suggestions{% endblock %}
+
+{% block breadcrumb %}<span>Ideas and suggestions</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Ideas and suggestions</h1>
+ <p class="subtitle">
+      Anything that would make the company work better. A suggestion that states the
+      problem clearly is far more useful than one that only states the solution.
+ </p>
+ </div>
+ <div class="page-actions">
+ <a class="btn btn-primary" href="{{ url_for('suggestions.create') }}">Raise a suggestion</a>
+  {% if current_user.is_ceo %}
+ <a class="btn btn-ghost" href="{{ url_for('suggestions.reviews') }}">Review queue</a>
+  {% endif %}
+ </div>
+</div>
+
+<div class="stat-strip mb-6">
+ <a class="stat" href="{{ url_for('suggestions.index') }}">
+ <span class="label">Open</span>
+ <span class="value numeric">{{ stats.open }}</span>
+ <span class="meta">awaiting a decision</span>
+ </a>
+ <a class="stat" href="{{ url_for('suggestions.index', status='UNDER_REVIEW') }}">
+ <span class="label">Under review</span>
+ <span class="value numeric">{{ stats.under_review }}</span>
+ </a>
+ <a class="stat" href="{{ url_for('suggestions.index', status='PLANNED') }}">
+ <span class="label">Planned</span>
+ <span class="value numeric">{{ stats.planned }}</span>
+ </a>
+ <a class="stat" href="{{ url_for('suggestions.index', status='IMPLEMENTED') }}">
+ <span class="label">Implemented</span>
+ <span class="value numeric positive">{{ stats.implemented }}</span>
+ </a>
+ <a class="stat" href="{{ url_for('suggestions.index', status='DECLINED') }}">
+ <span class="label">Declined</span>
+ <span class="value numeric">{{ stats.declined }}</span>
+ <span class="meta">with a written reason</span>
+ </a>
+</div>
+
+<form class="filters" method="get" action="{{ url_for('suggestions.index') }}">
+ <div class="filter filter-wide">
+ <label class="visually-hidden" for="sort">Order</label>
+ <select id="sort" name="sort">
+ <option value="recent" {% if sort == 'recent' %}selected{% endif %}>Newest first</option>
+ <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest first</option>
+ <option value="popular" {% if sort == 'popular' %}selected{% endif %}>Most supported</option>
+ </select>
+ </div>
+ <div class="filter">
+ <label for="status">Status</label>
+ <select id="status" name="status">
+ <option value="">Any</option>
+    {% for value in statuses %}
+ <option value="{{ value }}" {% if status|upper == value %}selected{% endif %}>
+        {{ status_labels.get(value, value|title) }}
+ </option>
+    {% endfor %}
+ </select>
+ </div>
+ <div class="filter">
+ <label for="category">Category</label>
+ <select id="category" name="category">
+ <option value="">Any</option>
+    {% for value in categories %}
+ <option value="{{ value }}" {% if category|upper == value %}selected{% endif %}>{{ value|title }}</option>
+    {% endfor %}
+ </select>
+ </div>
+ <div class="filter">
+ <label for="project">Project</label>
+ <select id="project" name="project">
+ <option value="">Any</option>
+    {% for project in projects %}
+ <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+    {% endfor %}
+ </select>
+ </div>
+ <div class="row row-tight">
+ <label class="checkbox-line" for="mine">
+ <input type="checkbox" id="mine" name="mine" value="1" {% if mine %}checked{% endif %}>
+ <span>Only mine</span>
+ </label>
+ <button type="submit" class="btn">Apply</button>
+ <a class="btn btn-ghost" href="{{ url_for('suggestions.index') }}">Reset</a>
+ </div>
+</form>
+
+{% if suggestions %}
+<div class="stack-4">
+  {% for suggestion in suggestions %}
+ <article class="panel">
+ <div class="panel-head">
+ <div style="min-width:0;">
+ <h2 style="margin-bottom:2px;font-size:var(--text-md);">
+ <a href="{{ url_for('suggestions.detail', suggestion_id=suggestion.id) }}">{{ suggestion.title }}</a>
+ </h2>
+ <p class="small muted mb-0">
+            {{ suggestion.display_author }}
+            · {{ suggestion.created_at|relative }}
+            · {{ suggestion.category|title }}
+            {% if suggestion.project %} · {{ suggestion.project.name }}{% endif %}
+          </p>
+ </div>
+ <div class="row row-tight">
+          {{ status_pill(suggestion.status) }}
+          {% if voting_enabled %}
+ <form method="post" action="{{ url_for('suggestions.vote', suggestion_id=suggestion.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm {% if suggestion.id in voted_ids %}btn-primary{% endif %}"
+                    aria-pressed="{{ 'true' if suggestion.id in voted_ids else 'false' }}"
+                    aria-label="Support this suggestion">
+ <span data-vote-count>{{ suggestion.vote_count }}</span>
+ <span class="visually-hidden">supporting votes</span>
+ </button>
+ </form>
+          {% endif %}
+ </div>
+ </div>
+
+ <div class="panel-body">
+ <p class="small" style="margin:0;">{{ suggestion.body|truncate(320) }}</p>
+ </div>
+
+    {% if suggestion.status == "DECLINED" and suggestion.decision_note %}
+ <div class="panel-foot">
+ <p class="small mb-0">
+ <span class="field-label">Why it was declined</span>
+          {{ suggestion.decision_note }}
+ </p>
+ </div>
+    {% elif suggestion.status == "IMPLEMENTED" and suggestion.decision_note %}
+ <div class="panel-foot">
+ <p class="small mb-0">
+ <span class="field-label">What was implemented</span>
+          {{ suggestion.decision_note }}
+ </p>
+ </div>
+    {% endif %}
+ </article>
+  {% endfor %}
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Suggestion pages">
+ <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+    {% if pagination.has_prev %}
+ <a href="{{ url_for('suggestions.index', page=pagination.prev_num, sort=sort, status=status, category=category, project=project_id, mine='1' if mine else None) }}">Previous</a>
+    {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+ <a href="{{ url_for('suggestions.index', page=pagination.next_num, sort=sort, status=status, category=category, project=project_id, mine='1' if mine else None) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="panel">
+  {% if status or category or project_id or mine %}
+    {{ empty_state(
+      "Nothing matches those filters",
+      "Clear the filters to see the whole board.",
+      url_for('suggestions.index'),
+      "Clear the filters"
+    ) }}
+  {% else %}
+    {{ empty_state(
+      "No suggestions yet",
+      "Raise the first one. Describe the problem you have noticed before describing the fix — that is what makes a suggestion actionable.",
+      url_for('suggestions.create'),
+      "Raise a suggestion"
+    ) }}
+  {% endif %}
+</div>
+{% endif %}
+
+{% if not anonymous_enabled %}
+<div class="notice mt-6">
+ <p class="field-label mb-2">About anonymity</p>
+ <p class="small muted mb-0">
+      Anonymous suggestions are switched off. Even when enabled, on a team of four
+      the way something is written and when it is posted can still identify the
+      author, and anyone with direct access to the database could correlate
+      timestamps. It reduces exposure; it does not make authorship impossible.
+ </p>
+</div>
+{% endif %}
+{% endblock %}

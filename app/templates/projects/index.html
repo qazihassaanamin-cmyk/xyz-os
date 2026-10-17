@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Projects{% endblock %}
+
+{% block breadcrumb %}<span>Projects</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Projects</h1>
+ <p class="subtitle">
+      The work {{ company_name }} is delivering. Progress is counted from accepted
+      tasks and completed milestones, not from estimates.
+ </p>
+ </div>
+ <div class="page-actions">
+    {% if can_create %}
+ <a class="btn btn-primary" href="{{ url_for('projects.create') }}">New project</a>
+    {% endif %}
+ <a class="btn btn-ghost" href="{{ url_for('projects.index', archived=None if include_archived else '1') }}">
+      {{ "Hide archived" if include_archived else "Show archived" }}
+ </a>
+ </div>
+</div>
+
+{% if rows %}
+<div class="grid-auto">
+    {% for row in rows %}
+    {% set project = row.project %}
+    {% set progress = row.progress %}
+ <article class="panel">
+ <div class="panel-head">
+ <h2 style="margin:0;">
+ <a href="{{ url_for('projects.detail', project_id=project.id) }}">{{ project.name }}</a>
+ </h2>
+        {{ status_pill(project.status) }}
+ </div>
+ <div class="panel-body">
+ <p class="small muted">{{ project.description or "No description recorded." }}</p>
+
+ <div class="progress-row mt-4">
+ <span>{{ progress.completed }} of {{ progress.total_tasks - progress.cancelled }} tasks accepted</span>
+ <span>{{ progress.percent }}%</span>
+ </div>
+ <div class="progress"><span style="width: {{ progress.percent }}%"></span></div>
+
+ <dl class="facts mt-6">
+ <div class="fact">
+ <dt>My role</dt>
+ <dd>{{ (row.role or "Member")|title }}</dd>
+ </div>
+ <div class="fact">
+ <dt>My open tasks here</dt>
+ <dd>{{ row.my_open_tasks }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Milestones</dt>
+ <dd>{{ progress.milestones_done }} of {{ progress.milestones_total }} completed</dd>
+ </div>
+ <div class="fact">
+ <dt>Target date</dt>
+ <dd>
+            {% if project.target_date %}
+ <span class="due-{{ 'overdue' if progress.is_overdue else 'later' }}">
+                {{ project.target_date|localdate }}
+              </span>
+            {% else %}
+ <span class="empty">Not set</span>
+            {% endif %}
+ </dd>
+ </div>
+ </dl>
+
+      {% if progress.in_review or progress.blocked %}
+ <div class="tag-list mt-4">
+          {% if progress.in_review %}
+ <span class="tag tone-attention">{{ progress.in_review }} awaiting review</span>
+          {% endif %}
+          {% if progress.blocked %}
+ <span class="tag tone-critical">{{ progress.blocked }} blocked</span>
+          {% endif %}
+ </div>
+      {% endif %}
+ </div>
+ </article>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="panel">
+  {{ empty_state(
+    "No projects yet",
+    "Projects are created by the CEO. Once you are added to one, its tasks, milestones and evidence appear here.",
+    url_for('projects.create') if can_create else None,
+    "Create the first project" if can_create else None
+  ) }}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill, submission_pill %}
+{% from "partials/_file_thumb.html" import evidence_gallery, lightbox %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Task reviews{% endblock %}
+
+{% block breadcrumb %}<span>Task reviews</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Task reviews</h1>
+ <p class="subtitle">
+      Submissions waiting on a decision, oldest first. Approving completes the
+      task and releases the assignee's XP; returning it requires written feedback.
+ </p>
+ </div>
+</div>
+
+{% if submissions %}
+<div class="stack-6">
+    {% for submission in submissions %}
+    {% set task = submission.task %}
+ <article class="panel">
+ <div class="panel-head">
+ <div>
+ <h2 style="margin-bottom:2px;">
+            {% if task %}
+ <a href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a>
+            {% else %}Task removed{% endif %}
+ </h2>
+ <p class="small muted mb-0">
+              Submitted by {{ submission.submitted_by.display_name if submission.submitted_by else "—" }}
+              · {{ submission.created_at|localdatetime }}
+              · revision {{ submission.revision_number }}
+              {% if task and task.project %} · {{ task.project.name }}{% endif %}
+ </p>
+ </div>
+ <div class="row row-tight">
+          {{ submission_pill(submission.status) }}
+          {% if task %}<span class="pill no-dot">{{ task.difficulty|title }} · {{ task.base_xp }} base XP</span>{% endif %}
+ </div>
+ </div>
+
+ <div class="panel-body">
+ <p class="field-label">What was submitted</p>
+ <div class="doc" style="max-width:none;">{{ submission.summary }}</div>
+
+        {% if submission.external_link %}
+ <p class="mt-4 mb-0">
+ <span class="field-label">Link</span>
+ <a href="{{ submission.external_link }}" target="_blank" rel="noopener noreferrer nofollow">
+              {{ submission.external_link|truncate(90) }}
+ </a>
+ </p>
+        {% endif %}
+
+        {% if task and task.acceptance_criteria %}
+ <div class="notice mt-4">
+ <p class="field-label mb-2">Agreed acceptance criteria</p>
+ <div class="small">{{ task.acceptance_criteria }}</div>
+ </div>
+        {% endif %}
+ </div>
+
+      {% if submission.attachments %}
+ <div class="panel-body" style="border-top:1px solid var(--border-subtle);">
+ <p class="field-label">Evidence</p>
+          {{ evidence_gallery(submission.attachments, "No files attached.") }}
+ </div>
+      {% endif %}
+
+      {% if task %}
+ <div class="panel-foot">
+ <form method="post" action="{{ url_for('tasks.review', submission_id=submission.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="feedback-{{ submission.id }}">Feedback</label>
+ <textarea id="feedback-{{ submission.id }}" name="feedback" rows="3"
+                    placeholder="Required when requesting changes. Be specific about what must differ."></textarea>
+ </div>
+ <div class="field">
+ <label class="checkbox-line" for="quality-{{ submission.id }}">
+ <input type="checkbox" id="quality-{{ submission.id }}" name="quality_bonus" value="1">
+ <span>High quality — release the quality bonus as well</span>
+ </label>
+ </div>
+ <div class="btn-row">
+ <button type="submit" name="decision" value="APPROVED" class="btn btn-primary">Approve and complete</button>
+ <button type="submit" name="decision" value="CHANGES_REQUESTED" class="btn">Request changes</button>
+ <a class="btn btn-ghost" href="{{ url_for('tasks.detail', task_id=task.id) }}">Open the task</a>
+ </div>
+ </form>
+ </div>
+      {% endif %}
+ </article>
+    {% endfor %}
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Review pages">
+ <span class="summary">{{ pagination.total }} submission{{ "s" if pagination.total != 1 else "" }}</span>
+    {% if pagination.has_prev %}
+ <a href="{{ url_for('tasks.review_queue', page=pagination.prev_num) }}">Previous</a>
+    {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+ <a href="{{ url_for('tasks.review_queue', page=pagination.next_num) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{{ lightbox() }}
+
+{% else %}
+<div class="panel">
+  {{ empty_state(
+    "Nothing is waiting for review",
+    "When a colleague submits work with you as the reviewer, it appears here with their summary, evidence and the agreed acceptance criteria."
+  ) }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/uploads.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Edit entry" if entry else "New knowledge entry" }}{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('knowledge.index') }}">Knowledge</a>
+ <span aria-hidden="true">/</span>
+ <span>{{ "Edit" if entry else "New" }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>{{ "Edit entry" if entry else "New knowledge entry" }}</h1>
+ <p class="subtitle">
+      Written for a colleague who was not in the conversation. Markdown-lite is
+      supported: bold, italic, inline code, links, lists, headings and quotes.
+ </p>
+ </div>
+</div>
+
+<form method="post"
+      action="{{ url_for('knowledge.edit', entry_id=entry.id) if entry else url_for('knowledge.create') }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+ <div class="workspace">
+ <div>
+ <section class="panel">
+ <div class="panel-head"><h2>Content</h2></div>
+ <div class="panel-body">
+ <div class="field">
+ <label for="title">Title <span class="tone-critical" aria-hidden="true">*</span></label>
+ <input id="title" name="title" type="text" required minlength="4" maxlength="200"
+                  value="{{ entry.title if entry else request.form.get('title', '') }}"
+                  placeholder="What this document answers">
+ </div>
+
+ <div class="field">
+ <label for="summary">One-line summary</label>
+ <input id="summary" name="summary" type="text" maxlength="400"
+                  value="{{ entry.summary or '' if entry else request.form.get('summary', '') }}"
+                  placeholder="Shown in the list so someone can tell whether to open it">
+ </div>
+
+ <div class="field">
+ <label for="body">Body <span class="tone-critical" aria-hidden="true">*</span></label>
+ <textarea id="body" name="body" rows="22" required minlength="20" maxlength="40000"
+                    placeholder="# Heading&#10;&#10;Paragraph text with **bold**, *italic* and `code`.&#10;&#10;- A list item&#10;- Another item&#10;&#10;> A quoted note&#10;&#10;[A link](https://example.com)">{{ entry.body if entry else request.form.get('body', '') }}</textarea>
+ <p class="field-hint">
+            Markdown-lite only. Raw HTML is escaped and never rendered, so a document
+            cannot inject markup.
+ </p>
+ </div>
+ </div>
+ </section>
+ </div>
+
+ <aside class="rail">
+ <section class="panel">
+ <div class="panel-head"><h2>Classification</h2></div>
+ <div class="panel-body">
+ <div class="field">
+ <label for="category">Category</label>
+ <select id="category" name="category">
+            {% for value in categories %}
+ <option value="{{ value }}"
+              {% if (entry and entry.category == value) or (not entry and value == 'TECHNICAL') %}selected{% endif %}>
+              {{ value|title }}
+ </option>
+            {% endfor %}
+ </select>
+ </div>
+
+ <div class="field">
+ <label for="project_id">Project</label>
+ <select id="project_id" name="project_id">
+ <option value="">Not project-specific</option>
+            {% for project in projects %}
+ <option value="{{ project.id }}" {% if entry and entry.project_id == project.id %}selected{% endif %}>
+              {{ project.name }}
+ </option>
+            {% endfor %}
+ </select>
+ </div>
+
+ <div class="field">
+ <label class="checkbox-line" for="is_decision_record">
+ <input type="checkbox" id="is_decision_record" name="is_decision_record" value="1"
+                {% if entry and entry.is_decision_record %}checked{% endif %}>
+ <span>This records a technical decision</span>
+ </label>
+ <p class="field-hint">
+            Decision records are listed first and are worth writing even when the
+            outcome seems obvious at the time.
+ </p>
+ </div>
+ </div>
+
+ <div class="panel-foot">
+ <div class="btn-row">
+ <button type="submit" name="publish" value="1" class="btn btn-primary">
+            {{ "Save and publish" if not entry or not entry.is_published else "Save changes" }}
+ </button>
+ <button type="submit" class="btn">Save as draft</button>
+ </div>
+ <p class="field-hint mt-2">
+          Publishing awards the documentation credit once. Editing afterwards does not
+          award it again.
+ </p>
+ </div>
+ </section>
+ </aside>
+ </div>
+</form>
+{% endblock %}

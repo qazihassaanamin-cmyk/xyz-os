@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}The Lounge{% endblock %}
+
+{% block breadcrumb %}<span>The Lounge</span>{% endblock %}
+
+{% block content %}
+<div class="lounge-shell"
+     data-lounge
+     data-api-url="{{ url_for('lounge.api_messages') }}"
+     data-topic="{{ topic }}"
+     data-poll-seconds="{{ poll_seconds }}"
+     data-latest-id="{{ latest_id }}">
+
+ <div class="page-head">
+ <div>
+ <h1>The Lounge</h1>
+ <p class="subtitle">
+        Conversation, not minutes. Nothing here is scored, and no analytics are kept
+        on messages.
+      </p>
+ </div>
+ <div class="page-actions">
+ <span class="small muted numeric">{{ stats.total_messages }} messages</span>
+ </div>
+ </div>
+
+ <nav class="view-tabs" aria-label="Lounge topics">
+    {% for name in topics %}
+ <a class="view-tab" href="{{ url_for('lounge.index', topic=name) }}"
+       {% if topic == name %}aria-current="page"{% endif %}>
+      {{ name|title }}
+ <span class="badge-count">{{ topic_counts.get(name, 0) }}</span>
+ </a>
+    {% endfor %}
+ </nav>
+
+ <section class="panel">
+ <div class="panel-head">
+ <h2 class="lounge-topic">{{ topic|title }}</h2>
+ <span class="count">Refreshes every {{ poll_seconds }} seconds</span>
+ </div>
+
+ <div class="panel-body">
+ <div class="chat-list" data-lounge-list>
+        {% if messages %}
+          {% for message in messages %}
+ <article class="chat-msg {% if message.author_id == current_user.id %}is-mine{% endif %} {% if message.parent_id %}is-reply{% endif %} {% if message.is_hidden %}removed{% endif %}"
+                   id="m{{ message.id }}">
+ <div class="chat-head">
+ <span class="avatar avatar-sm {{ message.author_name|lower|replace(' ', '-') }}">{{ message.author_initials }}</span>
+ <span class="chat-author">{{ message.author_name }}</span>
+              {% if message.author_is_ceo %}<span class="pill no-dot">CEO</span>{% endif %}
+ <time class="chat-when" datetime="{{ message.created_at }}">
+                {{ message.created_at|relative }}
+              </time>
+              {% if message.is_edited %}
+ <span class="chat-when">· edited</span>
+              {% endif %}
+              {% if message.task_id %}
+ <span class="chat-when">· about a task</span>
+              {% endif %}
+ </div>
+
+ <p class="chat-body">
+              {% if message.is_hidden %}Message removed.{% else %}{{ message.body }}{% endif %}
+ </p>
+
+            {% if not message.is_hidden %}
+ <div class="chat-actions">
+ <form method="post" action="{{ url_for('lounge.post') }}" style="display:inline;">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="parent_id" value="{{ message.id }}">
+ <input type="hidden" name="topic" value="{{ topic }}">
+ <button type="submit" name="reply_intent" value="1">Reply</button>
+ </form>
+
+              {% if message.can_edit %}
+ <form method="post" action="{{ url_for('lounge.edit', message_id=message.id) }}"
+                      style="display:inline;" data-confirm="Edit this message? The original text is kept.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="body" value="{{ message.body }}">
+ <button type="submit">Edit</button>
+ </form>
+              {% endif %}
+
+              {% if message.can_delete %}
+ <form method="post" action="{{ url_for('lounge.delete', message_id=message.id) }}"
+                      style="display:inline;" data-confirm="Remove this message?">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit">Remove</button>
+ </form>
+              {% endif %}
+ </div>
+            {% endif %}
+ </article>
+          {% endfor %}
+        {% else %}
+ <div data-lounge-empty>
+            {{ empty_state(
+              "Nothing has been said in this room yet",
+              "Say something. The Lounge is for the conversation that does not belong in a task comment."
+            ) }}
+ </div>
+        {% endif %}
+ </div>
+ </div>
+
+ <div class="panel-foot lounge-composer">
+ <form method="post" action="{{ url_for('lounge.post') }}" enctype="multipart/form-data">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="topic" value="{{ topic }}">
+
+ <div class="field">
+ <label class="visually-hidden" for="lounge-body">Message</label>
+ <textarea id="lounge-body" name="body" rows="3" required maxlength="4000"
+                  placeholder="Write a message. Line breaks are preserved."></textarea>
+ <p class="field-hint">
+            Links are shown as plain text. Messages cannot be edited more than 10
+            minutes after posting.
+ </p>
+ </div>
+
+ <details>
+ <summary class="small" style="cursor:pointer;">Attach an image or reference a task</summary>
+ <div class="grid-2 mt-2">
+ <div class="field">
+ <label for="lounge-files">Images</label>
+ <input id="lounge-files" name="files" type="file" multiple
+                    accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                    data-upload-input data-max-files="{{ max_files }}" data-max-mb="{{ max_upload_mb }}"
+                    data-upload-list="#lounge-upload-feedback">
+ <div id="lounge-upload-feedback" class="mt-2"></div>
+ </div>
+ <div class="field">
+ <label for="lounge-task">Reference a task</label>
+ <select id="lounge-task" name="task_id">
+ <option value="">No task reference</option>
+              {% for task in tasks %}
+ <option value="{{ task.id }}">{{ task.title|truncate(60) }}</option>
+              {% endfor %}
+ </select>
+ </div>
+ </div>
+ </details>
+
+ <div class="row row-between mt-4">
+ <span class="tiny dim">
+          Polling every {{ poll_seconds }} seconds. Only new messages are fetched.
+ </span>
+ <button type="submit" class="btn btn-primary">Post</button>
+ </div>
+ </form>
+ </div>
+ </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/lounge.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/uploads.js') }}" defer></script>
+{% endblock %}

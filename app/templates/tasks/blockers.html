@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Blockers{% endblock %}
+
+{% block breadcrumb %}<span>Blockers</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Blockers</h1>
+ <p class="subtitle">
+      Work that cannot move without something else happening. Raising one
+      promptly is better than letting a deadline slip quietly.
+ </p>
+ </div>
+</div>
+
+<nav class="view-tabs" aria-label="Blocker views">
+ <a class="view-tab" href="{{ url_for('tasks.blockers', status='open') }}"
+     {% if status == 'open' %}aria-current="page"{% endif %}>Open</a>
+ <a class="view-tab" href="{{ url_for('tasks.blockers', status='resolved') }}"
+     {% if status == 'resolved' %}aria-current="page"{% endif %}>Resolved</a>
+ <a class="view-tab" href="{{ url_for('tasks.blockers', status='all') }}"
+     {% if status == 'all' %}aria-current="page"{% endif %}>All</a>
+</nav>
+
+{% if blockers %}
+<div class="stack-4">
+    {% for blocker in blockers %}
+ <article class="panel">
+ <div class="panel-head">
+ <div>
+ <h2 style="margin-bottom:2px;font-size:var(--text-md);">
+              {{ blocker.kind|replace("_", " ")|title }}
+ </h2>
+ <p class="small muted mb-0">
+              Raised by {{ blocker.raised_by.display_name if blocker.raised_by else "—" }}
+              · {{ blocker.created_at|localdatetime }}
+              {% if blocker.project %} · {{ blocker.project.name }}{% endif %}
+ </p>
+ </div>
+ <div class="row row-tight">
+          {{ status_pill(blocker.status) }}
+          {% if blocker.assigned_to %}
+ <span class="pill no-dot">{{ blocker.assigned_to.display_name }} helping</span>
+          {% endif %}
+ </div>
+ </div>
+
+ <div class="panel-body">
+ <p class="mb-0">{{ blocker.description }}</p>
+
+        {% if blocker.task %}
+ <p class="mt-4 mb-0 small">
+ <span class="field-label">Blocking task</span>
+ <a href="{{ url_for('tasks.detail', task_id=blocker.task.id) }}">{{ blocker.task.title }}</a>
+          {% if blocker.task.assignee %}
+            <span class="dim">· owned by {{ blocker.task.assignee.display_name }}</span>
+          {% endif %}
+ </p>
+        {% endif %}
+
+        {% if blocker.resolution_note %}
+ <div class="notice mt-4">
+ <p class="field-label mb-2">How it was resolved</p>
+ <p class="small mb-0">{{ blocker.resolution_note }}</p>
+ <p class="tiny dim mt-2 mb-0">
+              {{ blocker.resolved_by.display_name if blocker.resolved_by else "—" }}
+              · {{ blocker.resolved_at|localdatetime if blocker.resolved_at else "" }}
+            </p>
+ </div>
+        {% endif %}
+ </div>
+
+      {% if blocker.is_open %}
+ <div class="panel-foot">
+ <div class="grid-2">
+          {% if can_resolve(blocker) %}
+ <form method="post" action="{{ url_for('tasks.resolve_blocker', blocker_id=blocker.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label class="visually-hidden" for="resolve-{{ blocker.id }}">Resolution note</label>
+ <input id="resolve-{{ blocker.id }}" name="resolution_note" type="text" required
+                     placeholder="How was it resolved?" class="mb-2">
+ <button type="submit" class="btn btn-primary btn-sm">Mark resolved</button>
+ </form>
+          {% endif %}
+
+ <form method="post" action="{{ url_for('tasks.assign_blocker_helper', blocker_id=blocker.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label for="helper-{{ blocker.id }}" class="small">Ask someone to help</label>
+ <select id="helper-{{ blocker.id }}" name="helper_id" class="mb-2">
+ <option value="">Choose a member</option>
+              {% for member in members %}
+                {% if member.id != current_user.id %}
+ <option value="{{ member.id }}">{{ member.display_name }}</option>
+                {% endif %}
+              {% endfor %}
+ </select>
+ <button type="submit" class="btn btn-sm">Request help</button>
+ </form>
+ </div>
+ </div>
+      {% endif %}
+ </article>
+    {% endfor %}
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Blocker pages">
+ <span class="summary">{{ pagination.total }} total</span>
+    {% if pagination.has_prev %}<a href="{{ url_for('tasks.blockers', status=status, page=pagination.prev_num) }}">Previous</a>{% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}<a href="{{ url_for('tasks.blockers', status=status, page=pagination.next_num) }}">Next</a>{% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="panel">
+  {% if status == 'resolved' %}
+    {{ empty_state("Nothing has been resolved yet", "Blockers that get resolved are kept here, with the note explaining how.") }}
+  {% else %}
+    {{ empty_state(
+      "No open blockers",
+      "When something is stopping work, raise a blocker from the task workspace. It marks the task as blocked and notifies the right person."
+    ) }}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

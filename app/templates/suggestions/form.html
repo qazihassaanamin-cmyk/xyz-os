@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}New suggestion{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('suggestions.index') }}">Ideas and suggestions</a>
+ <span aria-hidden="true">/</span>
+ <span>New</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Raise a suggestion</h1>
+ <p class="subtitle">
+      Start with the problem. A clear problem statement is what makes a suggestion
+      possible to evaluate and act on.
+ </p>
+ </div>
+</div>
+
+<form method="post" action="{{ url_for('suggestions.create') }}" style="max-width:760px;">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+ <section class="panel">
+ <div class="panel-head"><h2>The suggestion</h2></div>
+ <div class="panel-body">
+
+ <div class="field">
+ <label for="body">What problem have you noticed? <span class="tone-critical" aria-hidden="true">*</span></label>
+ <textarea id="body" name="body" rows="7" required minlength="10" maxlength="8000"
+                placeholder="Describe the problem as you experience it. What happens now, and why is it costly?">{{ request.form.get('body', '') }}</textarea>
+ <p class="field-hint">
+          The problem first. Without it, a proposed solution has nothing to be judged against.
+ </p>
+ </div>
+
+ <div class="field">
+ <label for="title">Your suggestion, in one line <span class="tone-critical" aria-hidden="true">*</span></label>
+ <input id="title" name="title" type="text" required minlength="4" maxlength="200"
+               value="{{ request.form.get('title', '') }}"
+               placeholder="A short, specific title">
+ </div>
+
+ <div class="grid-2">
+ <div class="field">
+ <label for="category">Category</label>
+ <select id="category" name="category">
+          {% for value in categories %}
+ <option value="{{ value }}" {% if request.form.get('category') == value %}selected{% endif %}>
+            {{ value|title }}
+ </option>
+          {% endfor %}
+ </select>
+ </div>
+
+ <div class="field">
+ <label for="project_id">Related project</label>
+ <select id="project_id" name="project_id">
+ <option value="">Not project-specific</option>
+          {% for project in projects %}
+ <option value="{{ project.id }}">{{ project.name }}</option>
+          {% endfor %}
+ </select>
+ </div>
+ </div>
+
+      {% if anonymous_enabled %}
+ <div class="field">
+ <label class="checkbox-line" for="is_anonymous">
+ <input type="checkbox" id="is_anonymous" name="is_anonymous" value="1">
+ <span>Submit without attaching my name</span>
+ </label>
+ <p class="field-hint">
+          Your name is not stored with the suggestion. Be aware that on a team this
+          size, writing style and timing can still identify an author, and someone
+          with direct database access could correlate timestamps. This reduces
+          exposure; it does not make authorship impossible.
+ </p>
+ </div>
+      {% else %}
+ <div class="notice">
+ <p class="field-label mb-2">Anonymous suggestions are switched off</p>
+ <p class="small muted mb-0">
+          The CEO can enable them in Settings. Until then, suggestions carry your
+          name, which also lets you receive credit when one is implemented.
+ </p>
+ </div>
+      {% endif %}
+ </div>
+
+ <div class="panel-foot">
+ <div class="btn-row">
+ <button type="submit" class="btn btn-primary">Submit suggestion</button>
+ <a class="btn btn-ghost" href="{{ url_for('suggestions.index') }}">Cancel</a>
+ </div>
+ </div>
+ </section>
+</form>
+{% endblock %}

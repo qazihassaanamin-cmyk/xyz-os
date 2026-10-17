@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Activity log{% endblock %}
+
+{% block breadcrumb %}<span>Activity log</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Activity log</h1>
+ <p class="subtitle">
+      An append-only record of who changed what, and when. Entries are never edited
+      or deleted, so this is the account of record when something needs explaining.
+ </p>
+ </div>
+</div>
+
+<form class="filters" method="get" action="{{ url_for('ceo.activity') }}">
+ <div class="filter">
+ <label for="actor">Member</label>
+ <select id="actor" name="actor">
+ <option value="">Anyone</option>
+    {% for member in members %}
+ <option value="{{ member.id }}" {% if selected_actor == member.id %}selected{% endif %}>{{ member.display_name }}</option>
+    {% endfor %}
+ </select>
+ </div>
+ <div class="filter">
+ <label for="action">Action contains</label>
+ <input id="action" name="action" type="search" value="{{ selected_action }}" placeholder="task.status_changed">
+ </div>
+ <div class="filter">
+ <label for="entity_type">Object type</label>
+ <select id="entity_type" name="entity_type">
+ <option value="">Any</option>
+    {% for value in entity_types %}
+ <option value="{{ value }}" {% if selected_entity == value %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+ </select>
+ </div>
+ <div class="filter">
+ <label for="start">From</label>
+ <input id="start" name="start" type="date" value="{{ start.isoformat() if start else '' }}">
+ </div>
+ <div class="filter">
+ <label for="end">To</label>
+ <input id="end" name="end" type="date" value="{{ end.isoformat() if end else '' }}">
+ </div>
+ <div class="row row-tight">
+ <button type="submit" class="btn">Filter</button>
+ <a class="btn btn-ghost" href="{{ url_for('ceo.activity') }}">Reset</a>
+ </div>
+</form>
+
+{% if entries %}
+<div class="table-wrap">
+ <table class="data">
+ <caption>
+      {{ pagination.total }} entr{{ "y" if pagination.total == 1 else "ies" }},
+      newest first. The request identifier ties an entry to the server log.
+    </caption>
+ <thead>
+ <tr>
+ <th scope="col">When</th>
+ <th scope="col">Who</th>
+ <th scope="col">Action</th>
+ <th scope="col">Object</th>
+ <th scope="col">Summary</th>
+ <th scope="col">Source</th>
+ </tr>
+ </thead>
+ <tbody>
+      {% for entry in entries %}
+ <tr>
+ <td class="nowrap small muted">{{ entry.created_at|localdatetime }}</td>
+ <td class="nowrap">
+ <a href="{{ url_for('team.profile', username=entry.user.username) if entry.user else '#' }}">
+          {{ entry.user.display_name if entry.user else "System" }}
+ </a>
+ </td>
+ <td class="nowrap">
+ <span class="mono tiny">{{ entry.action }}</span>
+ </td>
+ <td class="nowrap small muted">
+          {% if entry.entity_type %}
+            {{ entry.entity_type }}{% if entry.entity_id %} #{{ entry.entity_id }}{% endif %}
+          {% else %}
+            —
+          {% endif %}
+ </td>
+ <td>{{ entry.summary or "" }}</td>
+ <td class="nowrap tiny dim">
+          {{ entry.ip_address or "—" }}
+          {% if entry.request_id %}
+ <span class="mono">{{ entry.request_id }}</span>
+          {% endif %}
+ </td>
+ </tr>
+      {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Activity pages">
+ <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+    {% if pagination.has_prev %}
+ <a href="{{ url_for('ceo.activity', page=pagination.prev_num, actor=selected_actor, action=selected_action, entity_type=selected_entity, start=start.isoformat() if start else None, end=end.isoformat() if end else None) }}">Previous</a>
+    {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+ <a href="{{ url_for('ceo.activity', page=pagination.next_num, actor=selected_actor, action=selected_action, entity_type=selected_entity, start=start.isoformat() if start else None, end=end.isoformat() if end else None) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="panel">
+  {{ empty_state(
+    "Nothing matches those filters",
+    "Clear the filters to see the whole log.",
+    url_for('ceo.activity'),
+    "Clear the filters"
+  ) }}
+</div>
+{% endif %}
+
+<div class="notice mt-6">
+ <p class="field-label mb-2">What this log contains, and what it does not</p>
+ <p class="small muted mb-0">
+      It records actions and the values that changed — statuses, assignments,
+      deadlines, permissions. It never contains passwords, password hashes, session
+      tokens or message contents. Anonymous suggestions leave no author against the
+      suggestion itself.
+ </p>
+</div>
+{% endblock %}

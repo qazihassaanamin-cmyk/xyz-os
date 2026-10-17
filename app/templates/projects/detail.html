@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill, priority_mark, due_mark, difficulty_mark %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}{{ project.name }}{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('projects.index') }}">Projects</a>
+ <span aria-hidden="true">/</span>
+ <span>{{ project.name }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>{{ project.name }}</h1>
+ <p class="subtitle">
+      {{ project.description or "No description recorded." }}
+      {% if project.target_date %}
+        Target {{ project.target_date|localdate }}.
+      {% endif %}
+ </p>
+ </div>
+ <div class="page-actions">
+    {% if can_manage %}
+ <a class="btn" href="{{ url_for('projects.edit', project_id=project.id) }}">Edit project</a>
+ <a class="btn btn-primary" href="{{ url_for('tasks.create', project=project.id) }}">New task</a>
+    {% endif %}
+    {% if is_ceo and project.status != "ARCHIVED" %}
+ <form method="post" action="{{ url_for('projects.archive', project_id=project.id) }}"
+              data-confirm="Archive this project? It stays readable but leaves the active list.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-ghost">Archive</button>
+ </form>
+    {% endif %}
+ </div>
+</div>
+
+<div class="stat-strip mb-6">
+ <div class="stat">
+ <span class="label">Accepted</span>
+ <span class="value numeric positive">{{ progress.completed }}</span>
+ <span class="meta">of {{ progress.total_tasks - progress.cancelled }} countable</span>
+ </div>
+ <div class="stat">
+ <span class="label">In flight</span>
+ <span class="value numeric">{{ progress.active }}</span>
+ <span class="meta">{{ progress.in_review }} awaiting review</span>
+ </div>
+ <div class="stat">
+ <span class="label">Blocked</span>
+ <span class="value numeric {% if progress.blocked %}critical{% endif %}">{{ progress.blocked }}</span>
+ <span class="meta">needs unblocking</span>
+ </div>
+ <div class="stat">
+ <span class="label">Milestones</span>
+ <span class="value numeric">{{ progress.milestones_done }}/{{ progress.milestones_total }}</span>
+ <span class="meta">completed</span>
+ </div>
+ <div class="stat">
+ <span class="label">Completion</span>
+ <span class="value numeric">{{ progress.percent }}%</span>
+ <span class="meta">accepted tasks</span>
+ </div>
+</div>
+
+{% if project.objectives %}
+<section class="panel">
+ <div class="panel-head"><h2>Objectives</h2></div>
+ <div class="panel-body"><div class="doc">{{ project.objectives }}</div></div>
+</section>
+{% endif %}
+
+<div class="workspace">
+ <div>
+    {# --- Tasks ------------------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Tasks</h2>
+ <span class="count">{{ pagination.total }}</span>
+ </div>
+
+ <div class="panel-body" style="padding-bottom:0;">
+ <nav class="view-tabs" style="margin-bottom:0;border-bottom:0;" aria-label="Filter tasks by status">
+ <a class="view-tab" href="{{ url_for('projects.detail', project_id=project.id) }}"
+          {% if not status_filter %}aria-current="page"{% endif %}>All</a>
+          {% for value in task_statuses %}
+          {% if value != "CANCELLED" %}
+ <a class="view-tab" href="{{ url_for('projects.detail', project_id=project.id, status=value) }}"
+             {% if status_filter|upper == value %}aria-current="page"{% endif %}>
+            {{ value|replace("_", " ")|title }}
+ </a>
+          {% endif %}
+          {% endfor %}
+ </nav>
+ </div>
+
+      {% if tasks %}
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Task</th>
+ <th scope="col">Owner</th>
+ <th scope="col">Status</th>
+ <th scope="col">Priority</th>
+ <th scope="col">Difficulty</th>
+ <th scope="col">Deadline</th>
+ </tr>
+ </thead>
+ <tbody>
+            {% for task in tasks %}
+ <tr>
+ <td>
+ <a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a>
+                {% if task.subtasks %}
+ <div class="progress thin mt-2" style="max-width:180px;">
+ <span style="width: {{ task.checklist_progress }}%"></span>
+ </div>
+                {% endif %}
+ </td>
+ <td class="nowrap">
+                {% if task.assignee %}
+ <a href="{{ url_for('team.profile', username=task.assignee.username) }}">{{ task.assignee.display_name }}</a>
+                {% else %}<span class="dim">Unassigned</span>{% endif %}
+ </td>
+ <td class="nowrap">{{ status_pill(task.status) }}</td>
+ <td class="nowrap">{{ priority_mark(task.priority) }}</td>
+ <td class="nowrap">{{ difficulty_mark(task.difficulty) }}</td>
+ <td class="nowrap">{{ due_mark(task) }}</td>
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+      {% else %}
+        {{ empty_state(
+          "No tasks match this view",
+          "Tasks created against this project appear here with their owner, status and deadline.",
+          url_for('tasks.create', project=project.id) if can_manage else None,
+          "Create a task" if can_manage else None
+        ) }}
+      {% endif %}
+ </section>
+
+    {# --- Milestones -------------------------------------------------- #}
+ <section class="panel" id="milestones">
+ <div class="panel-head">
+ <h2>Milestones</h2>
+ <span class="count">{{ project.milestones|length }}</span>
+ </div>
+
+      {% if project.milestones %}
+ <ul class="list">
+          {% for milestone in project.milestones %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">{{ milestone.title }}</span>
+ <span class="meta">
+                  {% if milestone.due_date %}
+ <span class="due-{{ 'overdue' if milestone.is_overdue else 'later' }}">
+                      {{ milestone.due_date|localdate }}
+                    </span>
+                  {% endif %}
+                  {% if milestone.completed_at %}
+ <span class="tone-positive">Completed {{ milestone.completed_at|localdate }}</span>
+                  {% endif %}
+                  {% if milestone.description %}<span>{{ milestone.description|truncate(90) }}</span>{% endif %}
+ </span>
+ </span>
+ <span class="trail">
+                {{ status_pill(milestone.status) }}
+                {% if can_manage and milestone.status != "COMPLETED" %}
+ <form method="post" action="{{ url_for('projects.complete_milestone', milestone_id=milestone.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm">Mark complete</button>
+ </form>
+                {% endif %}
+ </span>
+ </div>
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state("No milestones defined", "A milestone marks a point the company has committed to reach. Adding one makes progress legible.") }}
+      {% endif %}
+
+      {% if can_manage %}
+ <div class="panel-foot">
+ <details>
+ <summary class="small" style="cursor:pointer;">Add a milestone</summary>
+ <form method="post" action="{{ url_for('projects.add_milestone', project_id=project.id) }}" class="mt-4">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="milestone-title">Title</label>
+ <input id="milestone-title" name="title" type="text" required minlength="3" maxlength="200">
+ </div>
+ <div class="field">
+ <label for="milestone-description">What completing this means</label>
+ <textarea id="milestone-description" name="description" rows="2"></textarea>
+ </div>
+ <div class="field">
+ <label for="milestone-due">Date</label>
+ <input id="milestone-due" name="due_date" type="date">
+ </div>
+ <button type="submit" class="btn btn-primary">Add milestone</button>
+ </form>
+ </details>
+ </div>
+      {% endif %}
+ </section>
+ </div>
+
+ <aside class="rail stack-4">
+    {# --- Team -------------------------------------------------------- #}
+ <section class="panel" id="team">
+ <div class="panel-head">
+ <h2>Team</h2>
+ <span class="count">{{ memberships|length }}</span>
+ </div>
+ <ul class="list">
+        {% for row in memberships %}
+ <li>
+ <a class="list-row" href="{{ url_for('team.profile', username=row.user.username) }}">
+ <span class="avatar avatar-sm {{ row.user.username }}">{{ row.user.initials }}</span>
+ <span class="grow">
+ <span class="title">{{ row.user.display_name }}</span>
+ <span class="meta">
+              <span>{{ "Lead" if row.membership.is_lead else "Member" }}</span>
+              <span>{{ row.open_tasks }} open</span>
+              <span>{{ row.done_tasks }} accepted</span>
+            </span>
+ </span>
+ </a>
+            {% if can_manage and project.owner_id != row.user.id %}
+ <form method="post" action="{{ url_for('projects.remove_member', project_id=project.id, user_id=row.user.id) }}"
+                  style="padding: 0 var(--space-4) var(--space-3);"
+                  data-confirm="Remove {{ row.user.display_name }} from this project?">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm btn-ghost">Remove</button>
+ </form>
+            {% endif %}
+ </li>
+        {% endfor %}
+ </ul>
+
+      {% if can_manage %}
+ <div class="panel-foot">
+ <details>
+ <summary class="small" style="cursor:pointer;">Add a member</summary>
+ <form method="post" action="{{ url_for('projects.add_member', project_id=project.id) }}" class="mt-4">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="member_id">Member</label>
+ <select id="member_id" name="user_id" required>
+ <option value="">Choose a member</option>
+              {% for member in all_members %}
+                {% if member.id not in project.member_ids %}
+ <option value="{{ member.id }}">{{ member.display_name }}</option>
+                {% endif %}
+              {% endfor %}
+ </select>
+ </div>
+ <div class="field">
+ <label for="role_in_project">Project role</label>
+ <select id="role_in_project" name="role_in_project">
+ <option value="MEMBER">Member</option>
+              {% if is_ceo %}<option value="LEAD">Lead — can assign and manage this project</option>{% endif %}
+ </select>
+ <p class="field-hint">
+              A project lead manages this project only. It grants no company-wide rights.
+ </p>
+ </div>
+ <button type="submit" class="btn btn-primary">Add to project</button>
+ </form>
+ </details>
+ </div>
+      {% endif %}
+ </section>
+
+    {# --- Facts ------------------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head"><h2>Details</h2></div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Status</dt>
+ <dd>{{ status_pill(project.status) }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Owner</dt>
+ <dd>
+            {% if project.owner %}
+ <a href="{{ url_for('team.profile', username=project.owner.username) }}">{{ project.owner.display_name }}</a>
+            {% else %}<span class="empty">Not set</span>{% endif %}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>Start</dt>
+ <dd>{{ project.start_date|localdate if project.start_date else "—" }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Target</dt>
+ <dd>{{ project.target_date|localdate if project.target_date else "—" }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Created</dt>
+ <dd>{{ project.created_at|localdate }} by {{ project.creator.display_name if project.creator else "—" }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Awaiting review</dt>
+ <dd>{{ summary.reviews.awaiting_review }}</dd>
+ </div>
+ </dl>
+ </div>
+ </section>
+ </aside>
+</div>
+{% endblock %}

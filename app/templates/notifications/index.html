@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block breadcrumb %}<span>Notifications</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Notifications</h1>
+ <p class="subtitle">
+      Assignments, reviews, blockers, achievements and announcements. Each event
+      notifies once — the same event never produces a second entry.
+ </p>
+ </div>
+ <div class="page-actions">
+    {% if unread_count %}
+ <form method="post" action="{{ url_for('notifications.mark_all_read') }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn">Mark all as read</button>
+ </form>
+    {% endif %}
+ </div>
+</div>
+
+<nav class="view-tabs" aria-label="Notification filter">
+ <a class="view-tab" href="{{ url_for('notifications.index') }}"
+     {% if not unread_only %}aria-current="page"{% endif %}>All</a>
+ <a class="view-tab" href="{{ url_for('notifications.index', unread='1') }}"
+     {% if unread_only %}aria-current="page"{% endif %}>
+    Unread <span class="badge-count">{{ unread_count }}</span>
+ </a>
+</nav>
+
+{% if notifications %}
+<ul class="list" style="border:1px solid var(--border-subtle);border-radius:var(--radius-card);background:var(--bg-surface);">
+    {% for notification in notifications %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">
+            {{ notification.title }}
+            {% if notification.is_unread %}
+ <span class="pill no-dot tone-info">Unread</span>
+            {% endif %}
+          </span>
+ <span class="meta">
+ <span>{{ notification.kind|replace("_", " ")|title }}</span>
+ <span>{{ notification.created_at|localdatetime }}</span>
+            {% if notification.actor %}<span>{{ notification.actor.display_name }}</span>{% endif %}
+ </span>
+          {% if notification.body %}
+ <span class="meta"><span>{{ notification.body|truncate(220) }}</span></span>
+          {% endif %}
+ </span>
+ <span class="trail">
+          {% if notification.url %}
+ <form method="post" action="{{ url_for('notifications.open_notification', notification_id=notification.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm">Open</button>
+ </form>
+          {% elif notification.is_unread %}
+ <form method="post" action="{{ url_for('notifications.mark_read', notification_id=notification.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm btn-ghost">Mark read</button>
+ </form>
+          {% endif %}
+ </span>
+ </div>
+ </li>
+    {% endfor %}
+</ul>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Notification pages">
+ <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+    {% if pagination.has_prev %}
+ <a href="{{ url_for('notifications.index', page=pagination.prev_num, unread='1' if unread_only else None) }}">Previous</a>
+    {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+ <a href="{{ url_for('notifications.index', page=pagination.next_num, unread='1' if unread_only else None) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="panel">
+  {% if unread_only %}
+    {{ empty_state(
+      "Nothing unread",
+      "You are up to date. New notifications appear here as work moves.",
+      url_for('notifications.index'),
+      "See all notifications"
+    ) }}
+  {% else %}
+    {{ empty_state(
+      "No notifications yet",
+      "You are notified when a task is assigned to you, when work is submitted for your review, when a decision is made on your submission, and when you earn an achievement."
+    ) }}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

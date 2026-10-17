@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Contribution board{% endblock %}
+
+{% block breadcrumb %}<span>Contribution board</span>{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:680px;">
+ <div class="panel-body">
+ <h1>The contribution board is switched off</h1>
+ <p class="muted">
+      The CEO has hidden the team-wide board. Your own level, progress, achievements
+      and award history remain available to you on your contribution page — this
+      setting only affects whether colleagues' totals are displayed side by side.
+ </p>
+ <div class="btn-row mt-6">
+ <a class="btn btn-primary" href="{{ url_for('xp.index') }}">My contribution</a>
+ <a class="btn" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
+ </div>
+ </div>
+</div>
+{% endblock %}

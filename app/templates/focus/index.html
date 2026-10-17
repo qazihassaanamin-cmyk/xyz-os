@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Focus timer{% endblock %}
+
+{% block breadcrumb %}<span>Focus timer</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Focus timer</h1>
+ <p class="subtitle">
+      A single session, timed by the server. Nothing else is shown here while a
+      session runs.
+ </p>
+ </div>
+ <div class="page-actions">
+ <a class="btn btn-ghost" href="{{ url_for('focus.history') }}">History and figures</a>
+ </div>
+</div>
+
+{% if state.active %}
+<div class="timer-shell"
+     data-timer
+     data-state-url="{{ url_for('focus.state') }}"
+     data-finish-url="{{ url_for('focus.finish', session_id=state.session_id) }}">
+
+ <div>
+ <p class="timer-minimum mb-2">
+        {% if state.is_paused %}Paused{% else %}In progress{% endif %}
+        · session started {{ state.server_time|localdatetime("%H:%M") }} UTC
+      </p>
+ <p class="timer-clock {% if state.is_paused %}paused{% endif %}" data-timer-clock aria-live="off">
+        {{ "%02d:%02d"|format(state.elapsed_seconds // 60, state.elapsed_seconds % 60) }}
+ </p>
+ <p class="timer-minimum mt-2" data-timer-status role="status" aria-live="polite">
+        {% if state.can_finish %}
+          Past the minimum. You can finish whenever you are ready.
+        {% else %}
+          Minimum {{ minimum_minutes }} minutes.
+        {% endif %}
+ </p>
+ </div>
+
+  {% if state.goal %}
+ <p class="timer-goal">“{{ state.goal }}”</p>
+  {% endif %}
+
+  {% if state.task_id %}
+ <p class="small muted">
+      Working on:
+ <a href="{{ url_for('tasks.detail', task_id=state.task_id) }}">the task you selected</a>
+ </p>
+  {% endif %}
+
+ <div class="timer-controls">
+    {% if state.is_paused %}
+ <form method="post" action="{{ url_for('focus.resume', session_id=state.session_id) }}" data-timer-form>
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-primary">Resume</button>
+ </form>
+    {% else %}
+ <form method="post" action="{{ url_for('focus.pause', session_id=state.session_id) }}" data-timer-form>
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn">Pause</button>
+ </form>
+    {% endif %}
+
+ <form method="post" action="{{ url_for('focus.finish', session_id=state.session_id) }}" data-timer-form>
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-primary" data-timer-finish
+            {% if not state.can_finish %}disabled aria-disabled="true"{% endif %}>
+        Finish session
+ </button>
+ </form>
+
+ <form method="post" action="{{ url_for('focus.abandon', session_id=state.session_id) }}" data-timer-form
+          data-confirm="Abandon this session? It will be recorded in your history but will not count.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-ghost">Abandon</button>
+ </form>
+ </div>
+
+ <p class="timer-note">
+    Elapsed time is measured from server timestamps. Paused time is not counted,
+    and the browser cannot claim a duration it did not earn. A completed session
+    records that a timer ran to the end — it is not a measure of how attentive or
+    productive you were.
+ </p>
+</div>
+
+{% else %}
+
+<div class="timer-shell">
+ <div>
+ <p class="timer-clock">00:00</p>
+ <p class="timer-minimum mt-2">No session running.</p>
+ </div>
+
+ <form method="post" action="{{ url_for('focus.start') }}" class="stack-4" style="width:100%;max-width:480px;">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+ <div class="field">
+ <label for="goal">What are you working on?</label>
+ <input id="goal" name="goal" type="text" maxlength="300"
+              placeholder="One concrete thing, so the session has a purpose.">
+ </div>
+
+      {% if tasks %}
+ <div class="field">
+ <label for="task_id">Attach to a task (optional)</label>
+ <select id="task_id" name="task_id">
+ <option value="">No task — thinking or unplanned work</option>
+          {% for task in tasks %}
+ <option value="{{ task.id }}">{{ task.title }}{% if task.project %} · {{ task.project.name }}{% endif %}</option>
+          {% endfor %}
+ </select>
+ <p class="field-hint">Sessions attached to a task appear on that task's record.</p>
+ </div>
+      {% endif %}
+
+ <button type="submit" class="btn btn-primary btn-block">Start a {{ minimum_minutes }}-minute session</button>
+ </form>
+
+ <div class="notice" style="max-width:560px;text-align:left;">
+ <p class="field-label mb-2">How this works</p>
+ <ul class="small" style="padding-left:20px;margin:0;">
+ <li>One session at a time. Starting a second is refused.</li>
+ <li>Time is measured by the server, so refreshing or closing the tab changes nothing.</li>
+ <li>A session only counts once it reaches {{ minimum_minutes }} minutes.</li>
+ <li>Pausing is allowed; paused time is not counted.</li>
+ <li>One completed session earns the daily focus credit. Further sessions are recorded without extra credit.</li>
+ <li>A session left paused for more than {{ pause_limit_minutes|default(30) }} minutes is recorded as interrupted.</li>
+ </ul>
+ </div>
+
+  {% if today_stats.credited_today %}
+ <p class="small tone-positive">Today's focus credit is already earned. Extra sessions are still recorded.</p>
+  {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/timer.js') }}" defer></script>
+{% endblock %}

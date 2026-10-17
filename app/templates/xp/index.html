@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill, xp_amount %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Contribution{% endblock %}
+
+{% block breadcrumb %}<span>Contribution</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Contribution</h1>
+ <p class="subtitle">
+      Your level, your progress and every award with the reason it was given.
+      Levels reflect accumulated verified contribution; they grant no authority over
+      anyone and no formal standing.
+ </p>
+ </div>
+ <div class="page-actions">
+ <a class="btn btn-ghost" href="{{ url_for('xp.leaderboard') }}">Team board</a>
+  {% if current_user.is_ceo %}
+ <a class="btn btn-ghost" href="{{ url_for('xp.admin') }}">Rewards configuration</a>
+  {% endif %}
+ </div>
+</div>
+
+{% if not gamification_on %}
+<div class="notice notice-important mb-6">
+    Gamification is currently switched off by the CEO. Your existing record is
+    preserved and will reappear if it is turned back on.
+</div>
+{% endif %}
+
+<div class="stat-strip mb-6">
+ <div class="stat">
+ <span class="label">Level</span>
+ <span class="value numeric">{{ profile.current_level }}</span>
+ <span class="meta">{{ profile.level_name }}</span>
+ </div>
+ <div class="stat">
+ <span class="label">Lifetime XP</span>
+ <span class="value numeric">{{ profile.lifetime_xp }}</span>
+ <span class="meta">earned from verified work</span>
+ </div>
+ <div class="stat">
+ <span class="label">This month</span>
+ <span class="value numeric">{{ month_xp }}</span>
+ <span class="meta">XP awarded</span>
+ </div>
+ <div class="stat">
+ <span class="label">Focus streak</span>
+ <span class="value numeric">{{ profile.focus_streak }}</span>
+ <span class="meta">best {{ profile.focus_streak_best }} · next at {{ next_milestone }}</span>
+ </div>
+ <div class="stat">
+ <span class="label">Achievements</span>
+ <span class="value numeric">{{ achievements|length }}</span>
+ <span class="meta">earned</span>
+ </div>
+</div>
+
+<div class="split">
+ <div>
+    {# --- Level progress --------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Progress to the next level</h2>
+    {% if not ladder.is_max %}
+ <span class="count">{{ ladder.xp_to_next_level }} XP to go</span>
+    {% else %}
+ <span class="count">Highest level reached</span>
+    {% endif %}
+ </div>
+ <div class="panel-body">
+ <div class="level-block">
+ <div class="level-line">
+ <span class="level-name">Level {{ ladder.level }} · {{ ladder.name }}</span>
+ <span class="level-xp numeric">{{ ladder.lifetime_xp }} XP</span>
+ </div>
+
+        {% if not ladder.is_max %}
+ <div class="progress"><span style="width: {{ ladder.percent }}%"></span></div>
+ <div class="progress-row">
+ <span>
+              {{ ladder.xp_into_level }} of {{ ladder.xp_into_level + ladder.xp_to_next_level }}
+              toward Level {{ ladder.next_level }} · {{ ladder.next_name }}
+            </span>
+ <span>{{ ladder.percent }}%</span>
+ </div>
+        {% else %}
+ <div class="progress"><span style="width: 100%"></span></div>
+        {% endif %}
+ </div>
+
+ <p class="small muted mt-6 mb-0">
+        {{ ladder.description or "" }}
+      </p>
+ </div>
+ </section>
+
+    {# --- Challenges -------------------------------------------------- #}
+    {% if challenges %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>This week's challenges</h2>
+ <span class="count">Optional</span>
+ </div>
+ <div class="panel-body">
+ <ul class="stack-4" style="list-style:none;padding:0;margin:0;">
+          {% for row in challenges %}
+ <li>
+ <div class="row row-between" style="align-items:baseline;">
+ <div>
+ <span class="strong small">{{ row.challenge.title }}</span>
+ <span class="tiny dim" style="display:block;">{{ row.challenge.description or "" }}</span>
+ </div>
+ <span class="small numeric">
+                {{ row.progress.current_value }} / {{ row.challenge.target_value }}
+                {% if row.challenge.reward_xp %}
+ <span class="dim">· +{{ row.challenge.reward_xp }} XP</span>
+                {% endif %}
+              </span>
+ </div>
+ <div class="progress thin mt-2 {% if row.is_complete %}gold{% endif %}">
+ <span style="width: {{ row.percent }}%"></span>
+ </div>
+              {% if row.is_complete %}
+ <p class="tiny tone-positive mt-2 mb-0">Complete.</p>
+              {% endif %}
+ </li>
+          {% endfor %}
+ </ul>
+ </div>
+ <div class="panel-foot">
+        Challenges are derived from verified events. None of them can be completed by
+        staying logged in or by running a timer.
+      </div>
+ </section>
+    {% endif %}
+
+    {# --- Ledger ------------------------------------------------------ #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Award history</h2>
+ <span class="count">{{ pagination.total }} entr{{ "y" if pagination.total == 1 else "ies" }}</span>
+ </div>
+
+ <div class="panel-body" style="padding-bottom:0;">
+ <nav class="view-tabs" style="margin-bottom:0;border-bottom:0;" aria-label="Filter awards">
+ <a class="view-tab" href="{{ url_for('xp.index') }}" {% if filter_name == 'all' %}aria-current="page"{% endif %}>All</a>
+ <a class="view-tab" href="{{ url_for('xp.index', filter='awards') }}" {% if filter_name == 'awards' %}aria-current="page"{% endif %}>Awards</a>
+ <a class="view-tab" href="{{ url_for('xp.index', filter='adjustments') }}" {% if filter_name == 'adjustments' %}aria-current="page"{% endif %}>Adjustments</a>
+ <a class="view-tab" href="{{ url_for('xp.index', filter='tasks') }}" {% if filter_name == 'tasks' %}aria-current="page"{% endif %}>From tasks</a>
+ </nav>
+ </div>
+
+      {% if transactions %}
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">When</th>
+ <th scope="col">Reason</th>
+ <th scope="col">Explanation</th>
+ <th scope="col">Granted by</th>
+ <th scope="col" class="num">XP</th>
+ <th scope="col" class="num">Balance</th>
+ </tr>
+ </thead>
+ <tbody>
+            {% for transaction in transactions %}
+ <tr>
+ <td class="nowrap small muted">{{ transaction.created_at|localdatetime("%d %b %H:%M") }}</td>
+ <td class="nowrap">{{ transaction.reason_label }}</td>
+ <td>
+                {{ transaction.note or "" }}
+                {% if transaction.task %}
+ <a class="tiny" href="{{ url_for('tasks.detail', task_id=transaction.task.id) }}">the task</a>
+                {% endif %}
+                {% if transaction.reversal_of_id %}
+ <span class="pill no-dot dim">reversal of #{{ transaction.reversal_of_id }}</span>
+                {% endif %}
+                {% if transaction.reversed_by_id %}
+ <span class="pill no-dot dim">reversed</span>
+                {% endif %}
+ </td>
+ <td class="nowrap small muted">
+                {{ transaction.awarded_by.display_name if transaction.awarded_by else "System" }}
+ </td>
+ <td class="num">{{ xp_amount(transaction.amount) }}</td>
+ <td class="num dim">{{ transaction.balance_after if transaction.balance_after is not none else "—" }}</td>
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+
+ <div class="panel-foot">
+        Every entry is permanent. Where an award was wrong, a compensating entry was
+        added and the original is still shown, marked as reversed.
+      </div>
+
+        {% if pagination.pages > 1 %}
+ <div class="panel-foot">
+ <nav class="pagination" aria-label="Award pages">
+ <span class="summary">{{ pagination.first_index }}–{{ pagination.last_index }} of {{ pagination.total }}</span>
+            {% if pagination.has_prev %}
+ <a href="{{ url_for('xp.index', page=pagination.prev_num, filter=filter_name) }}">Previous</a>
+            {% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+            {% if pagination.has_next %}
+ <a href="{{ url_for('xp.index', page=pagination.next_num, filter=filter_name) }}">Next</a>
+            {% endif %}
+ </nav>
+ </div>
+        {% endif %}
+
+      {% else %}
+        {{ empty_state(
+          "No awards recorded yet",
+          "XP is granted when work is genuinely accepted, when a focus session completes, when a blocker is resolved, or when documentation is published."
+        ) }}
+      {% endif %}
+ </section>
+ </div>
+
+ <aside class="rail stack-4">
+    {# --- What earns XP --------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head"><h2>What earns XP</h2></div>
+ <div class="panel-body">
+ <p class="small muted">
+        Only verified events. The list below is what the system currently rewards.
+      </p>
+ <dl class="facts">
+ <div class="fact">
+ <dt>Task accepted</dt>
+ <dd>40–350 XP by difficulty, released only when a reviewer approves it</dd>
+ </div>
+ <div class="fact">
+ <dt>Delivered before the deadline</dt>
+ <dd>+25 XP on accepted work</dd>
+ </div>
+ <div class="fact">
+ <dt>Marked high quality by the reviewer</dt>
+ <dd>+35 XP</dd>
+ </div>
+ <div class="fact">
+ <dt>Focus session completed</dt>
+ <dd>+20 XP, once per working day</dd>
+ </div>
+ <div class="fact">
+ <dt>Daily check-in and report</dt>
+ <dd>+10 and +15 XP, once each per working day</dd>
+ </div>
+ <div class="fact">
+ <dt>Blocker resolved</dt>
+ <dd>+40 XP, plus +30 XP for anyone who helped</dd>
+ </div>
+ <div class="fact">
+ <dt>Milestone completed</dt>
+ <dd>+120 XP</dd>
+ </div>
+ <div class="fact">
+ <dt>Suggestion implemented</dt>
+ <dd>+80 XP to the author</dd>
+ </div>
+ <div class="fact">
+ <dt>Knowledge entry published</dt>
+ <dd>+45 XP</dd>
+ </div>
+ <div class="fact">
+ <dt>Five-day streak</dt>
+ <dd>+25 XP at each milestone</dd>
+ </div>
+ </dl>
+ </div>
+ <div class="panel-foot">
+        Signing in, sending messages, creating trivial tasks and uploading
+        unnecessary screenshots earn nothing.
+      </div>
+ </section>
+
+    {# --- Quality ------------------------------------------------------ #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Quality, not volume</h2>
+ <span class="count">Last {{ quality.window_days }} days</span>
+ </div>
+ <div class="panel-body">
+ <div class="progress-row">
+ <span>Accepted first time</span>
+ <span>{{ quality.first_pass }} of {{ quality.reviewed }}</span>
+ </div>
+ <div class="progress"><span style="width: {{ 100 - quality.rework_percent }}%"></span></div>
+
+ <div class="progress-row mt-4">
+ <span>Delivered on time</span>
+ <span>{{ quality.on_time_percent }}%</span>
+ </div>
+ <div class="progress gold"><span style="width: {{ quality.on_time_percent }}%"></span></div>
+
+ <dl class="facts mt-6">
+ <div class="fact">
+ <dt>Tasks accepted (lifetime)</dt>
+ <dd>{{ profile.tasks_completed }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Reviews completed</dt>
+ <dd>{{ profile.reviews_approved }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Focus sessions</dt>
+ <dd>{{ profile.focus_sessions_completed }}</dd>
+ </div>
+ </dl>
+ </div>
+ </section>
+
+    {# --- Achievements ------------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Achievements</h2>
+ <span class="count">{{ achievements|length }}</span>
+ </div>
+    {% if achievements %}
+ <ul class="list">
+        {% for award in achievements %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">{{ award.display_name }}</span>
+ <span class="meta">
+              <span>{{ award.achievement.description if award.achievement else "" }}</span>
+              <span>{{ award.awarded_at|localdate }}</span>
+            </span>
+ </span>
+          {% if award.points_awarded %}
+ <span class="trail numeric small tone-positive">+{{ award.points_awarded }}</span>
+          {% endif %}
+ </div>
+ </li>
+        {% endfor %}
+ </ul>
+    {% else %}
+ <div class="panel-body">
+ <p class="small muted mb-0">
+          None yet. The first accepted task earns one.
+        </p>
+ </div>
+    {% endif %}
+ </section>
+ </aside>
+</div>
+{% endblock %}

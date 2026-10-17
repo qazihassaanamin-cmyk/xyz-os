@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Daily check-in{% endblock %}
+
+{% block breadcrumb %}<span>Daily check-in</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Today's record</h1>
+ <p class="subtitle">
+      {{ status.date|localdate("%A, %d %B %Y") }}.
+      {% if status.editable %}
+        Editable until {{ "%02d"|format(status.cutoff_hour) }}:59 company time. Every edit keeps a snapshot of what was there before.
+      {% else %}
+        Today's record is closed. Past records are readable but cannot be changed.
+      {% endif %}
+ </p>
+ </div>
+ <div class="page-actions">
+ <a class="btn btn-ghost" href="{{ url_for('daily.history') }}">My history</a>
+ </div>
+</div>
+
+{% if not status.editable %}
+<div class="notice notice-important mb-6">
+    Today's check-in and report can no longer be edited. This is a company setting,
+    not a restriction on you personally.
+</div>
+{% endif %}
+
+<div class="split">
+ <div>
+    {# --- Check-in ---------------------------------------------------- #}
+ <section class="panel" id="checkin">
+ <div class="panel-head">
+ <h2>Check-in</h2>
+      {% if status.checkin %}
+ <span class="pill pill-completed">Submitted {{ status.checkin.created_at|relative }}</span>
+      {% else %}
+ <span class="pill no-dot tone-attention">Not submitted</span>
+      {% endif %}
+ </div>
+ <div class="panel-body">
+ <p class="small muted">
+        Written at the start of the day. Four short answers are enough — the point
+        is that the plan is visible to the rest of the company.
+ </p>
+
+ <form method="post" action="{{ url_for('daily.save_checkin') }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+ <div class="field">
+ <label for="priorities">What are today's priorities? <span class="tone-critical" aria-hidden="true">*</span></label>
+ <textarea id="priorities" name="priorities" rows="3" required minlength="5"
+                maxlength="4000" {% if not status.editable %}disabled{% endif %}
+                placeholder="The two or three things that matter most today.">{{ status.checkin.priorities if status.checkin else '' }}</textarea>
+ </div>
+
+ <div class="field">
+ <label for="intended_result">What result do you intend to have by the end of the day?</label>
+ <textarea id="intended_result" name="intended_result" rows="2" maxlength="2000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="A concrete, checkable outcome.">{{ status.checkin.intended_result or '' if status.checkin else '' }}</textarea>
+ </div>
+
+ <div class="field">
+ <label for="support_needed">What support do you need?</label>
+ <textarea id="support_needed" name="support_needed" rows="2" maxlength="2000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="Reviews, decisions, information — name who can help.">{{ status.checkin.support_needed or '' if status.checkin else '' }}</textarea>
+ </div>
+
+ <div class="field">
+ <label for="checkin-blockers">Anything blocking you?</label>
+ <textarea id="checkin-blockers" name="blockers" rows="2" maxlength="2000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="If something is genuinely stuck, raise it as a blocker on the task as well.">{{ status.checkin.blockers or '' if status.checkin else '' }}</textarea>
+ </div>
+
+        {% if status.editable %}
+ <div class="form-actions">
+ <button type="submit" class="btn btn-primary">
+              {{ "Update check-in" if status.checkin else "Submit check-in" }}
+ </button>
+          {% if status.checkin %}
+ <span class="small muted">Editing keeps a snapshot of the previous version.</span>
+          {% endif %}
+ </div>
+        {% endif %}
+ </form>
+ </div>
+ </section>
+
+    {# --- End-of-day report ------------------------------------------ #}
+ <section class="panel" id="report">
+ <div class="panel-head">
+ <h2>End-of-day report</h2>
+      {% if status.report %}
+ <span class="pill pill-completed">
+          Submitted {{ status.report.created_at|relative }}
+          {% if status.report.revision_count %} · edited {{ status.report.revision_count }}×{% endif %}
+ </span>
+      {% else %}
+ <span class="pill no-dot tone-attention">Not submitted</span>
+      {% endif %}
+ </div>
+ <div class="panel-body">
+ <p class="small muted">
+        Written at the end of the day. Say what actually happened, including what
+        did not get done and why — an honest record is more useful than a tidy one.
+ </p>
+
+ <form method="post" action="{{ url_for('daily.save_report') }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+ <div class="field">
+ <label for="accomplished">What did you accomplish? <span class="tone-critical" aria-hidden="true">*</span></label>
+ <textarea id="accomplished" name="accomplished" rows="4" required minlength="5"
+                maxlength="6000" {% if not status.editable %}disabled{% endif %}
+                placeholder="Finished work, decisions made, problems solved.">{{ status.report.accomplished if status.report else '' }}</textarea>
+ </div>
+
+ <div class="field">
+ <label for="submitted_summary">What did you submit?</label>
+ <textarea id="submitted_summary" name="submitted_summary" rows="2" maxlength="4000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="Submissions made for review today, and to whom.">{{ status.report.submitted_summary or '' if status.report else '' }}</textarea>
+ </div>
+
+ <div class="field">
+ <label for="unfinished">What is unfinished?</label>
+ <textarea id="unfinished" name="unfinished" rows="2" maxlength="4000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="Work still in progress.">{{ status.report.unfinished or '' if status.report else '' }}</textarea>
+ </div>
+
+ <div class="field">
+ <label for="unfinished_reason">Why is it unfinished?</label>
+ <textarea id="unfinished_reason" name="unfinished_reason" rows="2" maxlength="4000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="Scope grew, a dependency slipped, something else took priority.">{{ status.report.unfinished_reason or '' if status.report else '' }}</textarea>
+ <p class="field-hint">A reason is not an excuse — it is what makes next week's plan realistic.</p>
+ </div>
+
+ <div class="field">
+ <label for="next_steps">What happens next?</label>
+ <textarea id="next_steps" name="next_steps" rows="2" maxlength="4000"
+                {% if not status.editable %}disabled{% endif %}
+                placeholder="The first thing you will do tomorrow.">{{ status.report.next_steps or '' if status.report else '' }}</textarea>
+ </div>
+
+        {% if status.editable %}
+ <div class="form-actions">
+ <button type="submit" class="btn btn-primary">
+              {{ "Update report" if status.report else "Submit report" }}
+ </button>
+          {% if status.report and status.report.revisions %}
+ <span class="small muted">
+              {{ status.report.revisions|length }} previous version{{ "s" if status.report.revisions|length != 1 else "" }} kept.
+ </span>
+          {% endif %}
+ </div>
+        {% endif %}
+ </form>
+ </div>
+ </section>
+ </div>
+
+ <aside class="rail stack-4">
+ <section class="panel">
+ <div class="panel-head"><h2>Why this exists</h2></div>
+ <div class="panel-body">
+ <p class="small muted">
+        Accountability here is based on clear expectations, real submissions and a
+        transparent record — not on how long anyone appears to be online.
+      </p>
+ <p class="small muted mb-0">
+        The check-in makes the plan visible. The report makes the outcome visible.
+        Together they mean a missed deadline is discussed early rather than
+        discovered late.
+      </p>
+ </div>
+ </section>
+
+ <section class="panel">
+ <div class="panel-head"><h2>Recent records</h2></div>
+      {% if history.checkins or history.reports %}
+        {% set day_keys = [] %}
+        {% for row in history.checkins %}{% if row.workday_date not in day_keys %}{% if day_keys.append(row.workday_date) %}{% endif %}{% endif %}{% endfor %}
+        {% for row in history.reports %}{% if row.workday_date not in day_keys %}{% if day_keys.append(row.workday_date) %}{% endif %}{% endif %}{% endfor %}
+ <ul class="list">
+          {% for day in day_keys|sort(reverse=true) %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">{{ day|localdate("%a %d %b") }}</span>
+ <span class="meta">
+                {% set c = history.checkins|selectattr("workday_date", "equalto", day)|list %}
+                {% set r = history.reports|selectattr("workday_date", "equalto", day)|list %}
+ <span>{% if c %}Check-in{% else %}No check-in{% endif %}</span>
+ <span>{% if r %}Report{% else %}No report{% endif %}</span>
+ </span>
+ </span>
+ </div>
+ </li>
+          {% endfor %}
+ </ul>
+ <div class="panel-foot">
+ <a class="small" href="{{ url_for('daily.history') }}">Open the full history</a>
+ </div>
+      {% else %}
+        {{ empty_state("Nothing recorded yet", "Your first check-in will appear here.") }}
+      {% endif %}
+ </section>
+ </aside>
+</div>
+{% endblock %}

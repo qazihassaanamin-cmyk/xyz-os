@@ -1,0 +1,737 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill, priority_mark, due_mark, xp_amount %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}{{ member.display_name }}{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('team.index') }}">Team</a>
+ <span aria-hidden="true">/</span>
+ <span>{{ member.display_name }}</span>
+{% endblock %}
+
+{% block content %}
+<header class="profile-head">
+ <span class="avatar avatar-xl {{ member.username }}">{{ member.initials }}</span>
+
+ <div class="profile-ident">
+ <h1>{{ member.display_name }}</h1>
+ <p class="profile-role">{{ member.official_title }}</p>
+ <p class="lede">
+      {{ meta.summary if meta else (member.bio or "No description recorded yet.") }}
+ </p>
+
+ <dl class="facts mt-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+ <div class="fact">
+ <dt>Login identifier</dt>
+ <dd class="mono">{{ member.identifier_label }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Account</dt>
+ <dd>
+          {{ "Active" if member.is_active else "Deactivated" }}
+          · created {{ member.created_at|localdate }}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>Time zone</dt>
+ <dd>{{ member.timezone }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Last signed in</dt>
+ <dd>{{ member.last_login_at|relative if member.last_login_at else "Never" }}</dd>
+ </div>
+ </dl>
+ </div>
+
+ <div class="page-actions" style="flex-direction:column;align-items:stretch;min-width:200px;">
+    {% if is_self %}
+ <a class="btn" href="{{ url_for('xp.index') }}">My contribution</a>
+ <a class="btn btn-ghost" href="{{ url_for('auth.change_password') }}">Change password</a>
+    {% elif is_ceo %}
+ <a class="btn btn-ghost" href="{{ url_for('xp.member_history', username=member.username) }}">Full XP history</a>
+ <form method="post" action="{{ url_for('team.generate_reset_link', username=member.username) }}"
+              data-confirm="Generate a single-use password reset link for {{ member.display_name }}?">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-ghost btn-block">Issue reset link</button>
+ </form>
+    {% endif %}
+ </div>
+</header>
+
+<nav class="view-tabs" aria-label="Profile sections">
+ <a class="view-tab" href="{{ url_for('team.profile', username=member.username) }}"
+     {% if tab == 'overview' %}aria-current="page"{% endif %}>Overview</a>
+ <a class="view-tab" href="{{ url_for('team.profile', username=member.username, tab='work') }}"
+     {% if tab == 'work' %}aria-current="page"{% endif %}>Work</a>
+ <a class="view-tab" href="{{ url_for('team.profile', username=member.username, tab='achievements') }}"
+     {% if tab == 'achievements' %}aria-current="page"{% endif %}>
+    Achievements <span class="badge-count">{{ achievements|length }}</span>
+ </a>
+ <a class="view-tab" href="{{ url_for('team.profile', username=member.username, tab='recognition') }}"
+     {% if tab == 'recognition' %}aria-current="page"{% endif %}>
+    Recognition <span class="badge-count">{{ active_badges|length }}</span>
+ </a>
+ <a class="view-tab" href="{{ url_for('team.profile', username=member.username, tab='focus') }}"
+     {% if tab == 'focus' %}aria-current="page"{% endif %}>Focus</a>
+ <a class="view-tab" href="{{ url_for('team.profile', username=member.username, tab='activity') }}"
+     {% if tab == 'activity' %}aria-current="page"{% endif %}>History</a>
+</nav>
+
+{# ==================== OVERVIEW ======================================== #}
+{% if tab == 'overview' %}
+<div class="split">
+ <div>
+    {% if meta %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Official role and responsibilities</h2>
+ </div>
+ <div class="panel-body">
+ <p class="field-label">{{ meta.title }}</p>
+          {% if meta.title_basis %}
+ <p class="small muted">{{ meta.title_basis }}</p>
+          {% endif %}
+ <ul class="small" style="padding-left:20px;margin:var(--space-4) 0 0;">
+            {% for item in meta.responsibilities %}
+ <li style="margin-bottom:var(--space-1);">{{ item }}</li>
+            {% endfor %}
+ </ul>
+
+          {% if meta.disclaimer %}
+ <div class="notice notice-important mt-6">
+ <p class="small mb-0">{{ meta.disclaimer }}</p>
+ </div>
+          {% endif %}
+ </div>
+ </section>
+    {% endif %}
+
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Biography and skills</h2>
+      {% if is_self or is_ceo %}
+ <button type="button" class="btn btn-sm btn-ghost" data-reveal-toggle="bio-editor"
+                aria-expanded="false" data-label-show="Edit" data-label-hide="Close">Edit</button>
+      {% endif %}
+ </div>
+ <div class="panel-body">
+ <div class="doc">{{ member.bio or "No biography recorded yet." }}</div>
+      {% if member.skills %}
+ <p class="field-label mt-6">Skills and focus areas</p>
+ <p class="small muted mb-0">{{ member.skills }}</p>
+      {% endif %}
+ </div>
+
+    {% if is_self or is_ceo %}
+ <div class="panel-foot" id="bio-editor" hidden>
+ <form method="post" action="{{ url_for('team.edit_profile', username=member.username) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="bio">Biography</label>
+ <textarea id="bio" name="bio" rows="4" maxlength="2000"
+                  placeholder="What you are responsible for and what you are working toward.">{{ member.bio or '' }}</textarea>
+ </div>
+ <div class="field">
+ <label for="skills">Skills and focus areas</label>
+ <textarea id="skills" name="skills" rows="3" maxlength="1000"
+                  placeholder="Technologies, disciplines and areas you can be relied on for.">{{ member.skills or '' }}</textarea>
+ </div>
+ <div class="grid-2">
+ <div class="field">
+ <label for="timezone">Time zone</label>
+ <input id="timezone" name="timezone" type="text" maxlength="64" value="{{ member.timezone }}">
+ <p class="field-hint">Decides when your working day starts and ends.</p>
+ </div>
+ <div class="field">
+ <label for="full_name">Full name</label>
+ <input id="full_name" name="full_name" type="text" maxlength="160" value="{{ member.full_name }}">
+ </div>
+ </div>
+
+        {% if is_ceo and not is_self %}
+ <div class="field">
+ <label for="title">Official title</label>
+ <input id="title" name="title" type="text" maxlength="160" value="{{ member.title or '' }}"
+                  placeholder="Caretaker CEO and Technical Lead">
+ <p class="field-hint">
+              Only the CEO can change the official title. It is a company record, not
+              a self-description, and it grants no permissions on its own.
+ </p>
+ </div>
+        {% endif %}
+
+ <button type="submit" class="btn btn-primary">Save profile</button>
+ </form>
+ </div>
+    {% endif %}
+ </section>
+
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Contribution over time</h2>
+      {% if can_view_xp and not is_self %}
+ <a class="tiny" href="{{ url_for('xp.member_history', username=member.username) }}">Full ledger</a>
+      {% endif %}
+ </div>
+ <div class="panel-body">
+ <div class="table-wrap">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">When</th>
+ <th scope="col">Reason</th>
+ <th scope="col">Detail</th>
+ <th scope="col" class="num">XP</th>
+ </tr>
+ </thead>
+ <tbody>
+            {% for transaction in xp_history %}
+ <tr>
+ <td class="nowrap small muted">{{ transaction.created_at|relative }}</td>
+ <td class="nowrap">{{ transaction.reason_label }}</td>
+ <td>
+                {{ transaction.note or "" }}
+                {% if transaction.task %}
+ <a class="tiny" href="{{ url_for('tasks.detail', task_id=transaction.task.id) }}">the task</a>
+                {% endif %}
+              </td>
+ <td class="num">{{ xp_amount(transaction.amount) }}</td>
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+ </div>
+ <div class="panel-foot">
+        Awards are granted only for verified events — accepted work, completed
+        sessions, resolved blockers — and every one is explained here.
+ </div>
+ </section>
+ </div>
+
+ <aside class="rail stack-4">
+    {% include "partials/_xp_panel.html" %}
+
+ <section class="panel">
+ <div class="panel-head"><h2>Current load</h2></div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Open tasks</dt>
+ <dd>{{ workload.open_tasks }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Overdue</dt>
+ <dd class="{% if workload.overdue %}tone-critical{% endif %}">{{ workload.overdue }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Waiting for their review</dt>
+ <dd>{{ workload.awaiting_my_review }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Projects</dt>
+ <dd>{{ workload.projects }}</dd>
+ </div>
+ </dl>
+ </div>
+ </section>
+
+ <section class="panel">
+ <div class="panel-head"><h2>Projects</h2></div>
+      {% if projects %}
+ <ul class="list">
+          {% for membership in projects %}
+ <li>
+ <a class="list-row" href="{{ url_for('projects.detail', project_id=membership.project.id) }}">
+ <span class="grow">
+ <span class="title">{{ membership.project.name }}</span>
+ <span class="meta">
+                <span>{{ membership.role_in_project|title }}</span>
+                <span>{{ membership.project.status|title }}</span>
+              </span>
+ </span>
+ </a>
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state("Not on a project", "The CEO adds members to projects.") }}
+      {% endif %}
+ </section>
+
+    {% if open_tasks %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Open work</h2>
+ <span class="count">{{ open_tasks|length }}</span>
+ </div>
+ <ul class="list">
+        {% for task in open_tasks %}
+ <li>
+ <a class="list-row" href="{{ url_for('tasks.detail', task_id=task.id) }}">
+ <span class="grow">
+ <span class="title">{{ task.title }}</span>
+ <span class="meta">
+              {% if task.project %}<span>{{ task.project.name }}</span>{% endif %}
+            </span>
+ </span>
+ <span class="trail">{{ status_pill(task.status) }}</span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+ </section>
+    {% endif %}
+ </aside>
+</div>
+{% endif %}
+
+{# ==================== WORK ============================================ #}
+{% if tab == 'work' %}
+<div class="split">
+ <div>
+ <section class="panel">
+ <div class="panel-head"><h2>This week</h2></div>
+ <div class="panel-body">
+ <div class="stat-strip">
+ <div class="stat">
+ <span class="label">Tasks accepted</span>
+ <span class="value numeric positive">{{ weekly.tasks_approved }}</span>
+ </div>
+ <div class="stat">
+ <span class="label">Focus sessions</span>
+ <span class="value numeric">{{ weekly.focus_sessions }}</span>
+ </div>
+ <div class="stat">
+ <span class="label">Reviews given</span>
+ <span class="value numeric">{{ weekly.reviews_done }}</span>
+ </div>
+ <div class="stat">
+ <span class="label">XP earned</span>
+ <span class="value numeric">{{ weekly.xp_earned }}</span>
+ </div>
+ </div>
+ </div>
+ </section>
+
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Quality indicators</h2>
+ <span class="count">Last {{ quality.window_days }} days</span>
+ </div>
+ <div class="panel-body">
+ <div class="grid-2">
+ <div>
+ <div class="progress-row">
+ <span>Accepted first time</span>
+ <span>{{ quality.first_pass }} of {{ quality.reviewed }}</span>
+ </div>
+ <div class="progress"><span style="width: {{ 100 - quality.rework_percent }}%"></span></div>
+ <p class="field-hint mt-2">{{ quality.rework_percent }}% needed rework before acceptance.</p>
+ </div>
+ <div>
+ <div class="progress-row">
+ <span>Delivered on time</span>
+ <span>{{ quality.on_time }} of {{ quality.approved }}</span>
+ </div>
+ <div class="progress gold"><span style="width: {{ quality.on_time_percent }}%"></span></div>
+ <p class="field-hint mt-2">{{ quality.on_time_percent }}% of accepted work met its deadline.</p>
+ </div>
+ </div>
+ </div>
+ <div class="panel-foot">
+        Rework is not a failure. It is the signal that tells us where a brief was
+        unclear or an estimate was optimistic.
+ </div>
+ </section>
+ </div>
+
+ <aside class="rail">
+ <section class="panel">
+ <div class="panel-head"><h2>At a glance</h2></div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Tasks accepted (lifetime)</dt>
+ <dd>{{ profile.tasks_completed }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Delivered on time (lifetime)</dt>
+ <dd>{{ profile.tasks_on_time }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Reviews completed</dt>
+ <dd>{{ profile.reviews_approved }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Blockers resolved</dt>
+ <dd>{{ profile.blockers_resolved }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Milestones completed</dt>
+ <dd>{{ profile.milestones_completed }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Knowledge entries</dt>
+ <dd>{{ profile.knowledge_entries }}</dd>
+ </div>
+ </dl>
+ </div>
+ </section>
+ </aside>
+</div>
+{% endif %}
+
+{# ==================== ACHIEVEMENTS ==================================== #}
+{% if tab == 'achievements' %}
+<section class="panel">
+ <div class="panel-head">
+ <h2>Achievements</h2>
+ <span class="count">{{ achievements|length }} earned</span>
+ </div>
+ <div class="panel-body">
+    {% if achievements %}
+ <ul class="chip-grid">
+        {% for award in achievements %}
+ <li class="chip earned">
+ <span class="chip-icon" aria-hidden="true">◆</span>
+ <div class="chip-body">
+ <p class="chip-title">{{ award.display_name }}</p>
+ <p class="chip-desc">{{ award.achievement.description if award.achievement else "" }}</p>
+ <p class="chip-meta">
+              Earned {{ award.awarded_at|localdate }}
+              {% if award.points_awarded %} · +{{ award.points_awarded }} XP{% endif %}
+            </p>
+ </div>
+ </li>
+        {% endfor %}
+ </ul>
+    {% else %}
+      {{ empty_state(
+        "No achievements yet",
+        "Achievements are earned from verified work — an accepted first task, a run of focus sessions, a resolved blocker. They appear here as they happen."
+      ) }}
+    {% endif %}
+ </div>
+ <div class="panel-foot">
+      Achievements are granted automatically when the underlying record exists. They
+      cannot be awarded by hand, and the same achievement is never granted twice.
+ </div>
+</section>
+{% endif %}
+
+{# ==================== RECOGNITION ===================================== #}
+{% if tab == 'recognition' %}
+<div class="split">
+ <div>
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Recognition</h2>
+ <span class="count">{{ active_badges|length }} active</span>
+ </div>
+ <div class="panel-body">
+      {% if badges %}
+ <ul class="chip-grid">
+          {% for badge in badges %}
+ <li class="chip recognition {% if not badge.is_active %}revoked{% endif %}">
+ <span class="chip-icon" aria-hidden="true">✦</span>
+ <div class="chip-body">
+ <p class="chip-title">{{ badge.name }}</p>
+              {% if badge.description %}
+ <p class="chip-desc">{{ badge.description }}</p>
+              {% endif %}
+ <p class="chip-meta">
+                Awarded by {{ badge.awarded_by.display_name if badge.awarded_by else " CEO" }}
+                · {{ badge.awarded_at|localdate }}
+                {% if badge.project %} · {{ badge.project.name }}{% endif %}
+              </p>
+              {% if not badge.is_active %}
+ <p class="chip-meta tone-critical">
+                  Revoked {{ badge.revoked_at|localdate }}
+                  {% if badge.revoke_reason %} — {{ badge.revoke_reason }}{% endif %}
+                </p>
+              {% endif %}
+
+              {% if is_ceo %}
+ <div class="btn-row mt-2">
+ <form method="post" action="{{ url_for('team.edit_badge', badge_id=badge.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="name" value="{{ badge.name }}">
+ <label class="visually-hidden" for="desc-{{ badge.id }}">Description</label>
+ <input id="desc-{{ badge.id }}" name="description" type="text" value="{{ badge.description or '' }}"
+                         placeholder="Reason for recognition" class="mb-2">
+ <button type="submit" class="btn btn-sm">Update</button>
+ </form>
+                  {% if badge.is_active %}
+ <form method="post" action="{{ url_for('team.revoke_badge', badge_id=badge.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label class="visually-hidden" for="revoke-{{ badge.id }}">Reason for revoking</label>
+ <input id="revoke-{{ badge.id }}" name="reason" type="text" required minlength="10"
+                         placeholder="Reason for revoking" class="mb-2">
+ <button type="submit" class="btn btn-sm btn-danger">Revoke</button>
+ </form>
+                  {% else %}
+ <form method="post" action="{{ url_for('team.reactivate_badge', badge_id=badge.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm">Reinstate</button>
+ </form>
+                  {% endif %}
+ </div>
+              {% endif %}
+ </div>
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state(
+          "No recognition awarded yet",
+          "Recognition is a decision the CEO makes, not something the system generates. It appears here when it is given."
+        ) }}
+      {% endif %}
+ </div>
+ <div class="panel-foot">
+      Recognition badges and titles are separate from achievements. They record a
+      person's judgement at a point in time, and they carry no formal standing.
+ </div>
+ </section>
+ </div>
+
+ <aside class="rail">
+    {% if is_ceo and not is_self %}
+ <section class="panel">
+ <div class="panel-head"><h2>Award recognition</h2></div>
+ <div class="panel-body">
+ <form method="post" action="{{ url_for('team.award_badge', username=member.username) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="badge-name">Badge or title</label>
+ <input id="badge-name" name="name" type="text" required minlength="3" maxlength="120"
+                placeholder="Technical Execution">
+ <p class="field-hint">
+              Use the area of contribution — technical execution, business
+              development, reliable delivery, collaboration, problem solving.
+ </p>
+ </div>
+ <div class="field">
+ <label for="badge-description">Why it is being awarded</label>
+ <textarea id="badge-description" name="description" rows="3" maxlength="600"
+                  placeholder="What was done, and what made it stand out."></textarea>
+ </div>
+ <div class="field">
+ <label for="badge-project">Related project</label>
+ <select id="badge-project" name="project_id">
+ <option value="">Not project-specific</option>
+          {% for membership in projects %}
+ <option value="{{ membership.project_id }}">{{ membership.project.name }}</option>
+          {% endfor %}
+ </select>
+ </div>
+ <button type="submit" class="btn btn-primary btn-block">Award recognition</button>
+ </form>
+ </div>
+ <div class="panel-foot">
+        The member is notified, and the award records who gave it and when.
+ </div>
+ </section>
+    {% endif %}
+
+ <section class="panel">
+ <div class="panel-head"><h2>Achievements</h2></div>
+      {% if achievements %}
+ <ul class="list">
+          {% for award in achievements[:6] %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">{{ award.display_name }}</span>
+ <span class="meta"><span>{{ award.awarded_at|localdate }}</span></span>
+ </span>
+ </div>
+ </li>
+          {% endfor %}
+ </ul>
+ <div class="panel-foot">
+ <a class="small" href="{{ url_for('team.profile', username=member.username, tab='achievements') }}">See all achievements</a>
+ </div>
+      {% else %}
+ <div class="panel-body"><p class="small muted mb-0">None earned yet.</p></div>
+      {% endif %}
+ </section>
+ </aside>
+</div>
+{% endif %}
+
+{# ==================== FOCUS =========================================== #}
+{% if tab == 'focus' %}
+<div class="stat-strip mb-6">
+ <div class="stat">
+ <span class="label">Completed, 90 days</span>
+ <span class="value numeric positive">{{ focus_stats.completed_total }}</span>
+ <span class="meta">{{ focus_stats.total_minutes }} minutes</span>
+ </div>
+ <div class="stat">
+ <span class="label">Current streak</span>
+ <span class="value numeric">{{ profile.focus_streak }}</span>
+ <span class="meta">best {{ profile.focus_streak_best }}</span>
+ </div>
+ <div class="stat">
+ <span class="label">Average session</span>
+ <span class="value numeric">{{ focus_stats.average_minutes }}</span>
+ <span class="meta">minutes</span>
+ </div>
+ <div class="stat">
+ <span class="label">Interrupted</span>
+ <span class="value numeric {% if focus_stats.interrupted_total %}attention{% endif %}">{{ focus_stats.interrupted_total }}</span>
+ <span class="meta">{{ focus_stats.abandoned_total }} abandoned</span>
+ </div>
+</div>
+
+<div class="panel">
+ <div class="panel-head">
+ <h2>Recent sessions</h2>
+ <span class="count">Last 20</span>
+ </div>
+  {% if focus_sessions %}
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Date</th>
+ <th scope="col">Started</th>
+ <th scope="col">Duration</th>
+ <th scope="col">Attached to</th>
+ <th scope="col">Status</th>
+ <th scope="col">Daily credit</th>
+ </tr>
+ </thead>
+ <tbody>
+        {% for session in focus_sessions %}
+ <tr>
+ <td class="nowrap">{{ session.workday_date|localdate("%d %b %Y") }}</td>
+ <td class="nowrap numeric">{{ session.started_at|localdatetime("%H:%M") if session.started_at else "—" }}</td>
+ <td class="nowrap numeric">
+            {{ humanise_seconds(session.duration_seconds) if session.duration_seconds else "—" }}
+ </td>
+ <td>
+            {% if session.task %}
+ <a href="{{ url_for('tasks.detail', task_id=session.task.id) }}">{{ session.task.title|truncate(44) }}</a>
+            {% elif session.goal %}
+ <span class="dim">{{ session.goal|truncate(44) }}</span>
+            {% else %}<span class="dim">—</span>{% endif %}
+ </td>
+ <td class="nowrap">{{ status_pill(session.status) }}</td>
+ <td class="nowrap">
+            {% if session.credited %}<span class="tone-positive">Counted</span>
+            {% else %}<span class="dim">—</span>{% endif %}
+ </td>
+ </tr>
+        {% endfor %}
+ </tbody>
+ </table>
+ </div>
+ <div class="panel-foot">
+      A recorded session means the timer ran to completion. It is not evidence of
+      attentiveness or output, and it is never treated as such.
+ </div>
+  {% else %}
+    {{ empty_state("No focus sessions recorded", "Sessions appear here once the member has completed one.") }}
+  {% endif %}
+</div>
+{% endif %}
+
+{# ==================== ACTIVITY ======================================== #}
+{% if tab == 'activity' %}
+<section class="panel">
+ <div class="panel-head">
+ <h2>Contribution history</h2>
+ <span class="count">Last 180 days</span>
+ </div>
+  {% if history %}
+ <ul class="timeline" style="padding: var(--space-6);">
+      {% for entry in history %}
+ <li class="tone-{{ entry.tone }}">
+ <p class="what">
+          {% if entry.url_endpoint %}
+ <a href="{{ url_for(entry.url_endpoint, **(entry.url_params or {})) }}">{{ entry.title }}</a>
+          {% else %}
+            {{ entry.title }}
+          {% endif %}
+ </p>
+        {% if entry.detail %}<p class="detail">{{ entry.detail }}</p>{% endif %}
+ <p class="when">{{ entry.when|localdatetime }} · {{ entry.relative }}</p>
+ </li>
+      {% endfor %}
+ </ul>
+  {% else %}
+    {{ empty_state(
+      "No contribution recorded yet",
+      "Accepted work, reviews, achievements, recognition and focus sessions all appear here as they happen."
+    ) }}
+  {% endif %}
+</section>
+{% endif %}
+
+{# ==================== CEO account controls ============================ #}
+{% if is_ceo and not is_self %}
+<section class="panel mt-6">
+ <div class="panel-head">
+ <h2>Account administration</h2>
+ <span class="count">CEO only</span>
+ </div>
+ <div class="panel-body">
+ <p class="small muted">
+      Official role and account status are company records. Changes are recorded in
+      the activity log with who made them and when.
+    </p>
+
+ <div class="grid-3">
+ <form method="post" action="{{ url_for('team.update_account', username=member.username) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="action" value="set_title">
+ <div class="field">
+ <label for="admin-title">Official title</label>
+ <input id="admin-title" name="title" type="text" maxlength="160" value="{{ member.title or '' }}">
+ </div>
+ <button type="submit" class="btn btn-sm">Update title</button>
+ </form>
+
+ <form method="post" action="{{ url_for('team.update_account', username=member.username) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="action" value="set_role">
+ <div class="field">
+ <label for="admin-role">Company role</label>
+ <select id="admin-role" name="role">
+ <option value="MEMBER" {% if member.role == "MEMBER" %}selected{% endif %}>Member</option>
+ <option value="CEO" {% if member.role == "CEO" %}selected{% endif %}>CEO — full company administration</option>
+ </select>
+ <p class="field-hint">At least one active CEO must always remain.</p>
+ </div>
+ <button type="submit" class="btn btn-sm">Update role</button>
+ </form>
+
+ <div>
+        {% if member.is_active %}
+ <form method="post" action="{{ url_for('team.update_account', username=member.username) }}"
+                data-confirm="Deactivate {{ member.display_name }}? They will be signed out and cannot sign in again until reactivated.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="action" value="deactivate">
+ <button type="submit" class="btn btn-danger btn-block">Deactivate account</button>
+ </form>
+ <p class="field-hint mt-2">
+            Deactivating does not delete anything. Their tasks, submissions, XP history
+            and audit records all remain.
+ </p>
+        {% else %}
+ <form method="post" action="{{ url_for('team.update_account', username=member.username) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="action" value="reactivate">
+ <button type="submit" class="btn btn-primary btn-block">Reactivate account</button>
+ </form>
+        {% endif %}
+ </div>
+ </div>
+ </div>
+</section>
+{% endif %}
+{% endblock %}

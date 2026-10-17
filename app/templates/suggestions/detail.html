@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill %}
+
+{% block title %}{{ suggestion.title }}{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('suggestions.index') }}">Ideas and suggestions</a>
+ <span aria-hidden="true">/</span>
+ <span>{{ suggestion.title|truncate(40) }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>{{ suggestion.title }}</h1>
+ <p class="subtitle">
+      {{ suggestion.display_author }}
+      · {{ suggestion.created_at|localdate("%d %B %Y") }}
+      · {{ suggestion.category|title }}
+      {% if suggestion.project %} · {{ suggestion.project.name }}{% endif %}
+ </p>
+ </div>
+ <div class="page-actions">
+    {{ status_pill(suggestion.status) }}
+    {% if voting_enabled %}
+ <form method="post" action="{{ url_for('suggestions.vote', suggestion_id=suggestion.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn {% if voted %}btn-primary{% endif %}"
+              aria-pressed="{{ 'true' if voted else 'false' }}">
+        {{ "Supporting" if voted else "Support this" }}
+ <span data-vote-count class="numeric">{{ suggestion.vote_count }}</span>
+ </button>
+ </form>
+    {% endif %}
+ </div>
+</div>
+
+<div class="split">
+ <div>
+ <section class="panel">
+ <div class="panel-head"><h2>The suggestion</h2></div>
+ <div class="panel-body">
+ <div class="doc">{{ suggestion.body }}</div>
+ </div>
+ </section>
+
+    {% if suggestion.decision_note %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>
+        {% if suggestion.status == "DECLINED" %}Why this was declined
+        {% elif suggestion.status == "IMPLEMENTED" %}What was implemented
+        {% else %}Decision note{% endif %}
+ </h2>
+ </div>
+ <div class="panel-body">
+ <div class="doc">{{ suggestion.decision_note }}</div>
+ <p class="field-hint mt-4">
+          {{ suggestion.decided_by.display_name if suggestion.decided_by else "—" }}
+          {% if suggestion.decided_at %}· {{ suggestion.decided_at|localdate("%d %B %Y") }}{% endif %}
+ </p>
+ </div>
+ </section>
+    {% endif %}
+
+    {% if suggestion.converted_to_id %}
+ <section class="panel">
+ <div class="panel-head"><h2>Converted into work</h2></div>
+ <div class="panel-body">
+ <p class="small">
+          This suggestion became
+ <a href="{{ url_for('tasks.detail', task_id=suggestion.converted_to_id) }}">a task</a>,
+          so its progress can be followed where the work actually happens.
+ </p>
+ </div>
+ </section>
+    {% endif %}
+ </div>
+
+ <aside class="rail stack-4">
+    {% if can_decide %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Decision</h2>
+ <span class="count">CEO or project lead</span>
+ </div>
+ <div class="panel-body">
+ <form method="post" action="{{ url_for('suggestions.change_status', suggestion_id=suggestion.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="new-status">Move to</label>
+ <select id="new-status" name="status" required>
+          {% for value in statuses %}
+            {% if value != suggestion.status %}
+ <option value="{{ value }}">{{ status_labels.get(value, value|title) }}</option>
+            {% endif %}
+          {% endfor %}
+ </select>
+ </div>
+ <div class="field">
+ <label for="decision-note">Reason or note</label>
+ <textarea id="decision-note" name="note" rows="4" maxlength="4000"
+                  placeholder="Required when declining or marking as implemented."></textarea>
+ <p class="field-hint">
+            Declining requires a written reason. A clear refusal is more useful than a silent one.
+ </p>
+ </div>
+ <button type="submit" class="btn btn-primary btn-block">Record decision</button>
+ </form>
+ </div>
+ </section>
+
+      {% if suggestion.status in ["PLANNED", "UNDER_REVIEW"] and not suggestion.converted_to_id %}
+ <section class="panel">
+ <div class="panel-head"><h2>Convert into a task</h2></div>
+ <div class="panel-body">
+ <form method="post" action="{{ url_for('suggestions.convert', suggestion_id=suggestion.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="convert-project">Project</label>
+ <select id="convert-project" name="project_id" required>
+ <option value="">Choose the project this belongs to</option>
+            {% for project in projects %}
+ <option value="{{ project.id }}">{{ project.name }}</option>
+            {% endfor %}
+ </select>
+ </div>
+ <div class="field">
+ <label for="convert-title">Task title</label>
+ <input id="convert-title" name="title" type="text" maxlength="220"
+                value="{{ suggestion.title }}">
+ </div>
+ <button type="submit" class="btn btn-primary btn-block">Create the task</button>
+ </form>
+ <p class="field-hint mt-2">
+          The suggestion keeps a link to the task it produced.
+ </p>
+ </div>
+ </section>
+      {% endif %}
+    {% endif %}
+
+ <section class="panel">
+ <div class="panel-head"><h2>Details</h2></div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Status</dt>
+ <dd>{{ status_pill(suggestion.status) }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Raised by</dt>
+ <dd>{{ suggestion.display_author }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Support</dt>
+ <dd>{{ suggestion.vote_count }} vote{{ "s" if suggestion.vote_count != 1 else "" }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Category</dt>
+ <dd>{{ suggestion.category|title }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Last updated</dt>
+ <dd>{{ suggestion.updated_at|relative }}</dd>
+ </div>
+ </dl>
+ <p class="field-hint mt-4">
+        Support is shown for information. It never decides an outcome on its own —
+        popularity and merit are not the same thing.
+      </p>
+ </div>
+ </section>
+ </aside>
+</div>
+{% endblock %}

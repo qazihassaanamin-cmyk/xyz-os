@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block breadcrumb %}<span>Settings</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Settings</h1>
+ <p class="subtitle">
+      Company configuration. Changes take effect from the next request and are
+      recorded in the activity log.
+ </p>
+ </div>
+</div>
+
+{% if storage %}
+<div class="stat-strip mb-6">
+ <div class="stat">
+ <span class="label">Storage used</span>
+ <span class="value numeric">{{ (storage.total_bytes / 1048576)|round(1) }}</span>
+ <span class="meta">MB of 512 MB</span>
+ </div>
+ <div class="stat">
+ <span class="label">Database</span>
+ <span class="value numeric">{{ (storage.database_bytes / 1048576)|round(1) }}</span>
+ <span class="meta">MB</span>
+ </div>
+ <div class="stat">
+ <span class="label">Uploads</span>
+ <span class="value numeric">{{ (storage.uploads_bytes / 1048576)|round(1) }}</span>
+ <span class="meta">MB</span>
+ </div>
+ <a class="stat" href="{{ url_for('uploads.storage') }}">
+ <span class="label">Manage files</span>
+ <span class="value" style="font-size:var(--text-md);">Open</span>
+ <span class="meta">purge removed uploads</span>
+ </a>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('ceo.settings') }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  {% for category, rows in groups.items() %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>{{ category_labels.get(category, category|title) }}</h2>
+ <span class="count">{{ rows|length }} setting{{ "s" if rows|length != 1 else "" }}</span>
+ </div>
+ <div class="panel-body">
+ <div class="grid-2">
+        {% for setting in rows %}
+ <div class="field">
+          {% if setting.value_type == "bool" %}
+ <input type="hidden" name="setting_{{ setting.key }}_present" value="1">
+ <label class="checkbox-line" for="setting_{{ setting.key }}">
+ <input type="checkbox" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="1"
+                    {% if setting.value == 'true' %}checked{% endif %}>
+ <span>{{ setting.label or setting.key }}</span>
+ </label>
+          {% elif setting.value_type == "int" %}
+ <label for="setting_{{ setting.key }}">{{ setting.label or setting.key }}</label>
+ <input id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" type="number"
+                   value="{{ setting.value or '' }}" style="max-width:180px;" class="numeric">
+          {% else %}
+ <label for="setting_{{ setting.key }}">{{ setting.label or setting.key }}</label>
+ <input id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" type="text"
+                   value="{{ setting.value or '' }}" maxlength="500">
+          {% endif %}
+
+          {% if setting.description %}
+ <p class="field-hint">{{ setting.description }}</p>
+          {% endif %}
+ <p class="tiny dim mono">{{ setting.key }}</p>
+ </div>
+        {% endfor %}
+ </div>
+ </div>
+ </section>
+  {% endfor %}
+
+ <div class="panel">
+ <div class="panel-foot">
+ <div class="row row-between">
+ <span class="small muted">
+        Some changes — the company time zone, upload limits and the report cutoff —
+        affect how records are grouped. Existing records keep the values they were
+        created with.
+      </span>
+ <button type="submit" class="btn btn-primary">Save settings</button>
+ </div>
+ </div>
+ </div>
+</form>
+
+<div class="notice mt-6">
+ <p class="field-label mb-2">Settings that are not here</p>
+ <p class="small muted mb-0">
+      Secrets — the session key, database credentials, SMTP password and the
+      anonymous vote salt — live only in the server environment, never in this table
+      and never in the database. Changing them requires access to the server, which
+      is deliberate.
+ </p>
+</div>
+{% endblock %}

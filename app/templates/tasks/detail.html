@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill, priority_mark, due_mark, difficulty_mark, submission_pill %}
+{% from "partials/_file_thumb.html" import evidence_gallery, lightbox, file_thumb %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block breadcrumb %}
+ <a href="{{ url_for('tasks.index') }}">Tasks</a>
+ <span aria-hidden="true">/</span>
+ <span>{{ task.title|truncate(48) }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>{{ task.title }}</h1>
+ <p class="subtitle">
+      {% if task.project %}
+ <a href="{{ url_for('projects.detail', project_id=task.project.id) }}">{{ task.project.name }}</a>
+        {% if task.milestone %} · {{ task.milestone.title }}{% endif %}
+        ·
+      {% endif %}
+      Created {{ task.created_at|localdate("%d %b %Y") }}
+      {% if task.creator %} by {{ task.creator.display_name }}{% endif %}
+ </p>
+ </div>
+ <div class="page-actions">
+    {% if can_edit %}
+ <a class="btn" href="{{ url_for('tasks.edit', task_id=task.id) }}">Edit task</a>
+    {% endif %}
+    {% if can_acknowledge %}
+ <form method="post" action="{{ url_for('tasks.acknowledge', task_id=task.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-primary">Acknowledge task</button>
+ </form>
+    {% endif %}
+ </div>
+</div>
+
+{% if can_acknowledge %}
+<div class="alert alert-warning" role="status">
+ <div class="alert-body">
+ <strong>You have not acknowledged this task yet</strong>
+ <span class="small">
+        Confirming you have read the brief and the acceptance criteria keeps the
+        record honest for both of us.
+ </span>
+ </div>
+</div>
+{% endif %}
+
+<div class="workspace">
+  {# ================= MAIN COLUMN: execution ========================== #}
+ <div>
+    {# --- The brief -------------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>What this task is</h2>
+ </div>
+ <div class="panel-body">
+      {% if task.description %}
+ <div class="doc">{{ task.description }}</div>
+      {% else %}
+ <p class="muted small mb-0">
+          No description was written. Ask the task owner to record what "done"
+          means before starting, rather than guessing.
+ </p>
+      {% endif %}
+ </div>
+ </section>
+
+    {# --- Acceptance criteria ---------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Acceptance criteria</h2>
+ <span class="count">What the reviewer will check</span>
+ </div>
+ <div class="panel-body">
+      {% if task.acceptance_criteria %}
+ <div class="doc">{{ task.acceptance_criteria }}</div>
+      {% else %}
+ <p class="muted small mb-0">
+          No acceptance criteria recorded. Without them, approval is a matter of
+          opinion rather than a check against agreed conditions.
+ </p>
+      {% endif %}
+ </div>
+ </section>
+
+    {# --- Checklist --------------------------------------------------- #}
+ <section class="panel" id="checklist">
+ <div class="panel-head">
+ <h2>Checklist</h2>
+ <span class="count" data-checklist-label>
+        {{ task.done_subtask_count }} of {{ task.subtasks|length }} complete
+ </span>
+ </div>
+ <div class="panel-body">
+      {% if task.subtasks %}
+ <div class="progress thin mb-4">
+ <span data-checklist-progress style="width: {{ task.checklist_progress }}%"></span>
+ </div>
+ <ul class="stack-2" style="list-style:none;padding:0;margin:0;">
+          {% for subtask in task.subtasks %}
+ <li class="row row-tight" style="align-items:flex-start;">
+ <input type="checkbox" id="st-{{ subtask.id }}"
+                   {% if subtask.is_done %}checked{% endif %}
+                   {% if not can_edit and not can_submit %}disabled{% endif %}
+                   data-checklist-url="{{ url_for('tasks.toggle_checklist_item', subtask_id=subtask.id) }}">
+ <label for="st-{{ subtask.id }}" style="margin:0;flex:1;font-size:var(--text-sm);color:{{ 'var(--text-muted)' if subtask.is_done else 'var(--text-primary)' }};{% if subtask.is_done %}text-decoration:line-through;{% endif %}">
+              {{ subtask.title }}
+ </label>
+            {% if can_edit %}
+ <form method="post" action="{{ url_for('tasks.remove_checklist_item', subtask_id=subtask.id) }}"
+                    data-confirm="Remove this checklist item?">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm btn-ghost" aria-label="Remove {{ subtask.title }}">Remove</button>
+ </form>
+            {% endif %}
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+ <p class="muted small">No steps yet. Breaking the work into steps makes progress visible.</p>
+      {% endif %}
+
+      {% if can_edit %}
+ <form method="post" action="{{ url_for('tasks.add_checklist_item', task_id=task.id) }}" class="row row-tight mt-4">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label class="visually-hidden" for="new-subtask">New checklist item</label>
+ <input id="new-subtask" name="title" type="text" placeholder="Add a step" maxlength="240" required style="flex:1;">
+ <button type="submit" class="btn">Add</button>
+ </form>
+      {% endif %}
+ </div>
+ </section>
+
+    {# --- Progress note ----------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Progress note</h2>
+ <span class="count">Where the work actually stands</span>
+ </div>
+ <div class="panel-body">
+      {% if can_submit or can_edit %}
+ <form method="post" action="{{ url_for('tasks.edit', task_id=task.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <input type="hidden" name="progress_note_only" value="1">
+ <label class="visually-hidden" for="progress_note">Progress note</label>
+ <textarea id="progress_note" name="progress_note" rows="3"
+                placeholder="A short note on where this stands, for anyone reading the record later."
+ >{{ task.progress_note or "" }}</textarea>
+ <button type="submit" class="btn btn-sm mt-2">Save note</button>
+ </form>
+      {% else %}
+ <p class="muted small mb-0">{{ task.progress_note or "No progress note recorded." }}</p>
+      {% endif %}
+      {% if task.progress_note %}
+ <p class="field-hint mt-2">Last updated {{ task.updated_at|relative }}.</p>
+      {% endif %}
+ </div>
+ </section>
+
+    {# --- Submission composer ---------------------------------------- #}
+ <section class="panel" id="submit">
+ <div class="panel-head">
+ <h2>Submit work for review</h2>
+      {% if task.status == "IN_REVIEW" %}
+ <span class="pill pill-in_review">Awaiting review</span>
+      {% endif %}
+ </div>
+ <div class="panel-body">
+      {% if can_submit %}
+ <form method="post" action="{{ url_for('tasks.submit', task_id=task.id) }}" enctype="multipart/form-data" data-loading-form>
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+ <div class="field">
+ <label for="summary">What you did <span class="tone-critical" aria-hidden="true">*</span></label>
+ <textarea id="summary" name="summary" rows="5" required minlength="10" maxlength="6000"
+                  placeholder="Describe the work so the reviewer can assess it against the acceptance criteria."></textarea>
+ <p class="field-hint">Required. A summary of at least 10 characters.</p>
+ </div>
+
+ <div class="field">
+ <label for="external_link">Link to the work</label>
+ <input id="external_link" name="external_link" type="url" maxlength="500"
+                 placeholder="https://…">
+ <p class="field-hint">
+            A repository, a staging URL, a document. Only http and https links are accepted.
+ </p>
+ </div>
+
+ <div class="field">
+ <label for="files">Evidence files</label>
+ <input id="files" name="files" type="file" multiple
+                 accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                 data-upload-input
+                 data-max-files="{{ max_files }}"
+                 data-max-mb="{{ max_upload_mb }}"
+                 data-upload-list="#upload-feedback"
+                 data-upload-submit="#submit-work">
+ <p class="field-hint">
+            Up to {{ max_files }} files, {{ max_upload_mb }} MB each. PNG, JPEG, WebP,
+            GIF or PDF. Images are re-encoded on the server, which removes camera
+            metadata.
+ </p>
+ <div id="upload-feedback" class="mt-2"></div>
+ </div>
+
+ <div class="form-actions">
+ <button type="submit" class="btn btn-primary" id="submit-work">Submit for review</button>
+ <span class="small muted">At least one file or a link is required.</span>
+ </div>
+ </form>
+      {% elif task.status == "COMPLETED" %}
+ <p class="muted small mb-0">
+          This task is complete. The accepted submission is below.
+ </p>
+      {% elif task.status == "BLOCKED" %}
+ <p class="muted small mb-0">
+          Resolve the open blocker before submitting. The reviewer needs to see
+          finished work, not work that is still stuck.
+ </p>
+      {% else %}
+ <p class="muted small mb-0">
+          You are not the assignee on this task, so you cannot submit work for it.
+      {% if task.assignee %} {{ task.assignee.display_name }} owns this.{% endif %}
+ </p>
+      {% endif %}
+ </div>
+ </section>
+
+    {# --- Submission history ----------------------------------------- #}
+ <section class="panel" id="submissions">
+ <div class="panel-head">
+ <h2>Submission history</h2>
+ <span class="count">{{ submissions|length }} revision{{ "s" if submissions|length != 1 else "" }}</span>
+ </div>
+
+      {% if submissions %}
+        {% for submission in submissions %}
+ <article class="panel-body" style="border-bottom:1px solid var(--border-subtle);">
+ <div class="row row-between mb-2">
+ <div class="row row-tight">
+ <span class="strong">Revision {{ submission.revision_number }}</span>
+              {{ submission_pill(submission.status) }}
+ </div>
+ <span class="small muted">
+              {{ submission.submitted_by.display_name if submission.submitted_by else "—" }}
+              · {{ submission.created_at|localdatetime }}
+ </span>
+ </div>
+
+ <div class="doc small" style="max-width:none;">{{ submission.summary }}</div>
+
+          {% if submission.external_link %}
+ <p class="mt-2 mb-0">
+ <a href="{{ submission.external_link }}" target="_blank" rel="noopener noreferrer nofollow">
+                {{ submission.external_link|truncate(80) }}
+ </a>
+ <span class="tiny dim">opens in a new tab</span>
+ </p>
+          {% endif %}
+
+          {% if submission.attachments %}
+ <div class="mt-4">
+ <p class="field-label">Evidence</p>
+              {{ evidence_gallery(submission.attachments, "No files on this revision.") }}
+ </div>
+          {% endif %}
+
+          {% if submission.reviews %}
+            {% for review in submission.reviews %}
+ <div class="notice mt-4 {% if review.decision == 'CHANGES_REQUESTED' %}notice-important{% endif %}">
+ <div class="row row-between mb-2">
+ <span class="strong small">
+                    {{ "Approved" if review.decision == "APPROVED" else "Changes requested" }}
+                  </span>
+ <span class="tiny dim">
+                    {{ review.reviewer.display_name if review.reviewer else "—" }}
+                    · {{ review.decided_at|localdatetime }}
+                  </span>
+ </div>
+                {% if review.feedback %}
+ <p class="small mb-0">{{ review.feedback }}</p>
+                {% else %}
+ <p class="small muted mb-0">No feedback recorded.</p>
+                {% endif %}
+                {% if review.decision == "APPROVED" and review.was_on_time %}
+ <p class="tiny tone-positive mt-2 mb-0">Delivered on or before the deadline.</p>
+                {% endif %}
+ </div>
+            {% endfor %}
+          {% elif submission.is_pending %}
+ <div class="notice mt-4">
+ <p class="small mb-0">
+                Awaiting a decision from
+                {{ task.reviewer.display_name if task.reviewer else "an unassigned reviewer" }}.
+              </p>
+ </div>
+          {% endif %}
+
+          {# --- The review control, for whoever may use it --- #}
+          {% if submission.is_pending and (current_user.id == task.reviewer_id or current_user.is_ceo) and current_user.id != submission.submitted_by_id %}
+ <form method="post" action="{{ url_for('tasks.review', submission_id=submission.id) }}" class="mt-4">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="feedback-{{ submission.id }}">Feedback</label>
+ <textarea id="feedback-{{ submission.id }}" name="feedback" rows="3"
+                      placeholder="Required when returning work. Say what specifically needs to change."></textarea>
+ </div>
+ <div class="field">
+ <label class="checkbox-line" for="quality-{{ submission.id }}">
+ <input type="checkbox" id="quality-{{ submission.id }}" name="quality_bonus" value="1">
+ <span>Mark this as high quality — the assignee receives the quality bonus</span>
+ </label>
+ </div>
+ <div class="btn-row">
+ <button type="submit" name="decision" value="APPROVED" class="btn btn-primary">
+                Approve and complete
+ </button>
+ <button type="submit" name="decision" value="CHANGES_REQUESTED" class="btn">
+                Request changes
+ </button>
+ </div>
+ </form>
+          {% endif %}
+ </article>
+        {% endfor %}
+      {% else %}
+        {{ empty_state(
+          "Nothing has been submitted yet",
+          "When work is submitted for review it appears here with its evidence and the reviewer's decision, and nothing is ever overwritten.",
+          None, None
+        ) }}
+      {% endif %}
+ </section>
+
+    {# --- Evidence gallery ------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Evidence gallery</h2>
+ <span class="count">{{ attachments|length }} file{{ "s" if attachments|length != 1 else "" }}</span>
+ </div>
+ <div class="panel-body">
+      {{ evidence_gallery(attachments, "No evidence attached to this task yet. Submissions with files appear here in chronological order.") }}
+ </div>
+ </section>
+
+    {# --- Blockers ---------------------------------------------------- #}
+ <section class="panel" id="blockers">
+ <div class="panel-head">
+ <h2>Blockers</h2>
+ <span class="count">{{ blockers|length }}</span>
+ </div>
+
+      {% if blockers %}
+ <ul class="list">
+        {% for blocker in blockers %}
+ <li>
+ <div class="list-row" style="align-items:flex-start;">
+ <span class="grow">
+ <span class="title">{{ blocker.description }}</span>
+ <span class="meta">
+                <span>{{ blocker.kind|replace("_", " ")|title }}</span>
+                <span>Raised by {{ blocker.raised_by.display_name if blocker.raised_by else "—" }}</span>
+                <span>{{ blocker.created_at|relative }}</span>
+                {% if blocker.assigned_to %}<span>{{ blocker.assigned_to.display_name }} helping</span>{% endif %}
+              </span>
+              {% if blocker.resolution_note %}
+ <span class="meta"><span class="tone-positive">Resolved:</span> {{ blocker.resolution_note|truncate(160) }}</span>
+              {% endif %}
+ </span>
+ <span class="trail">{{ status_pill(blocker.status) }}</span>
+ </div>
+
+            {% if blocker.is_open and (current_user.id in [blocker.raised_by_id, blocker.assigned_to_id] or current_user.is_ceo) %}
+ <form method="post" action="{{ url_for('tasks.resolve_blocker', blocker_id=blocker.id) }}"
+                  class="row row-tight" style="padding: 0 var(--space-4) var(--space-3);">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label class="visually-hidden" for="resolution-{{ blocker.id }}">How it was resolved</label>
+ <input id="resolution-{{ blocker.id }}" name="resolution_note" type="text" required
+                     placeholder="How was this resolved?" style="flex:1;">
+ <button type="submit" class="btn btn-sm">Mark resolved</button>
+ </form>
+            {% endif %}
+ </li>
+        {% endfor %}
+ </ul>
+      {% else %}
+ <div class="panel-body">
+ <p class="muted small mb-0">No blockers recorded on this task.</p>
+ </div>
+      {% endif %}
+
+      {% if can_raise_blocker %}
+ <div class="panel-foot">
+ <details>
+ <summary class="small" style="cursor:pointer;">Raise a blocker</summary>
+ <form method="post" action="{{ url_for('tasks.raise_blocker', task_id=task.id) }}" class="mt-4">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="blocker-kind">What kind of blocker is it?</label>
+ <select id="blocker-kind" name="kind" required>
+                {% for kind in blocker_kinds %}
+ <option value="{{ kind }}">{{ kind|replace("_", " ")|title }}</option>
+                {% endfor %}
+ </select>
+ </div>
+ <div class="field">
+ <label for="blocker-description">What is stopping you?</label>
+ <textarea id="blocker-description" name="description" rows="3" required minlength="10"
+                        placeholder="Be specific. A precise blocker is far easier to resolve."></textarea>
+ </div>
+ <div class="field">
+ <label for="blocker-helper">Ask someone specific (optional)</label>
+ <select id="blocker-helper" name="assigned_to_id">
+ <option value="">Leave it open to everyone</option>
+                {% for member in [task.reviewer, task.creator, task.project.owner if task.project else None] %}
+                  {% if member and member.id != current_user.id %}
+ <option value="{{ member.id }}">{{ member.display_name }}</option>
+                  {% endif %}
+                {% endfor %}
+ </select>
+ </div>
+ <button type="submit" class="btn btn-primary">Record blocker and mark task blocked</button>
+ </form>
+ </details>
+ </div>
+      {% endif %}
+ </section>
+
+    {# --- Discussion --------------------------------------------------- #}
+ <section class="panel" id="discussion">
+ <div class="panel-head">
+ <h2>Discussion</h2>
+ <span class="count">{{ task.comments|length }} comment{{ "s" if task.comments|length != 1 else "" }}</span>
+ </div>
+
+      {% if task.comments %}
+ <ul class="timeline" style="padding: var(--space-4);">
+        {% for comment in task.comments %}
+ <li>
+ <p class="what">{{ comment.body }}</p>
+ <p class="when">
+            {{ comment.author.display_name if comment.author else "Former member" }}
+            · {{ comment.created_at|relative }}
+ </p>
+ </li>
+        {% endfor %}
+ </ul>
+      {% else %}
+ <div class="panel-body">
+ <p class="muted small mb-0">No comments yet. Questions about the brief belong here rather than in private messages.</p>
+ </div>
+      {% endif %}
+
+ <div class="panel-foot">
+ <form method="post" action="{{ url_for('tasks.comment', task_id=task.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <label class="visually-hidden" for="comment-body">Add a comment</label>
+ <textarea id="comment-body" name="body" rows="3" required placeholder="Add a comment for the record."></textarea>
+ <button type="submit" class="btn btn-sm mt-2">Post comment</button>
+ </form>
+ </div>
+ </section>
+
+    {# --- Activity trail ---------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Activity trail</h2>
+ <span class="count">Append-only</span>
+ </div>
+      {% if audit_rows %}
+ <ul class="timeline" style="padding: var(--space-4);">
+          {% for entry in audit_rows %}
+ <li>
+ <p class="what">{{ entry.action_label }}</p>
+ <p class="detail">{{ entry.summary or "" }}</p>
+ <p class="when">
+              {{ entry.user.display_name if entry.user else "System" }}
+              · {{ entry.created_at|localdatetime }}
+ </p>
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+ <div class="panel-body">
+ <p class="muted small mb-0">No recorded changes yet.</p>
+ </div>
+      {% endif %}
+ </section>
+ </div>
+
+  {# ================= RAIL: the facts ================================== #}
+ <aside class="rail">
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Details</h2>
+ </div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Status</dt>
+ <dd>{{ status_pill(task.status) }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Owner</dt>
+ <dd>
+            {% if task.assignee %}
+ <a href="{{ url_for('team.profile', username=task.assignee.username) }}" class="person">
+ <span class="avatar avatar-sm {{ task.assignee.username }}">{{ task.assignee.initials }}</span>
+ <span class="name">{{ task.assignee.display_name }}</span>
+ </a>
+            {% else %}
+ <span class="empty">Unassigned</span>
+            {% endif %}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>Reviewer</dt>
+ <dd>
+            {% if task.reviewer %}
+ <a href="{{ url_for('team.profile', username=task.reviewer.username) }}">{{ task.reviewer.display_name }}</a>
+            {% else %}
+ <span class="empty">Not set — the CEO will review</span>
+            {% endif %}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>Priority</dt>
+ <dd>{{ priority_mark(task.priority) }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Difficulty</dt>
+ <dd>{{ difficulty_mark(task.difficulty, task.base_xp) }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Deadline</dt>
+ <dd>{{ due_mark(task) }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Start date</dt>
+ <dd>{{ task.start_date|localdate if task.start_date else "—" }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Acknowledged</dt>
+ <dd>
+            {% if task.acknowledged_at %}
+              {{ task.acknowledged_at|localdate("%d %b %Y") }}
+            {% else %}
+ <span class="empty">Not yet</span>
+            {% endif %}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>Created</dt>
+ <dd>{{ task.created_at|localdate("%d %b %Y") }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Last updated</dt>
+ <dd>{{ task.updated_at|relative }}</dd>
+ </div>
+ </dl>
+ </div>
+ </section>
+
+    {# --- Allowed transitions, rendered from the state machine -------- #}
+    {% if transitions %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Move this task</h2>
+ </div>
+ <div class="panel-body">
+ <p class="field-hint mb-4">
+          Only moves permitted by the workflow are shown. Reaching review happens
+          by submitting work, never by setting the status directly.
+ </p>
+ <form method="post" action="{{ url_for('tasks.change_status', task_id=task.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <div class="field">
+ <label for="status-target">New status</label>
+ <select id="status-target" name="status" required>
+            {% for value, label in transitions.items() %}
+ <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+ </select>
+ </div>
+ <div class="field">
+ <label for="status-reason">Reason (optional)</label>
+ <input id="status-reason" name="reason" type="text" maxlength="300">
+ </div>
+ <button type="submit" class="btn btn-block">Apply</button>
+ </form>
+ </div>
+ </section>
+    {% endif %}
+
+    {# --- Cancelling, restricted to the CEO --------------------------- #}
+    {% if current_user.is_ceo and task.status != "CANCELLED" %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Cancel</h2>
+ </div>
+ <div class="panel-body">
+ <p class="field-hint mb-4">
+          Cancelling keeps the record and its history. Nothing is deleted.
+ </p>
+ <form method="post" action="{{ url_for('tasks.cancel', task_id=task.id) }}"
+              data-confirm="Cancel this task? The record and its history are retained.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-danger btn-block">Cancel task</button>
+ </form>
+ </div>
+ </section>
+    {% endif %}
+ </aside>
+</div>
+
+{{ lightbox() }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/uploads.js') }}" defer></script>
+{% endblock %}

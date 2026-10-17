@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Announcements{% endblock %}
+
+{% block breadcrumb %}<span>Announcements</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Announcements</h1>
+ <p class="subtitle">
+      Company-wide notices from the CEO, and project notices for the people on them.
+ </p>
+ </div>
+  {% if can_publish %}
+ <div class="page-actions">
+ <a class="btn btn-primary" href="{{ url_for('announcements.create') }}">New announcement</a>
+ </div>
+  {% endif %}
+</div>
+
+{% if announcements %}
+<div class="stack-4" style="max-width:820px;">
+    {% for announcement in announcements %}
+ <article class="panel">
+ <div class="panel-head">
+ <div style="min-width:0;">
+ <h2 style="margin-bottom:2px;font-size:var(--text-md);">
+ <a href="{{ url_for('announcements.detail', announcement_id=announcement.id) }}">{{ announcement.title }}</a>
+ </h2>
+ <p class="small muted mb-0">
+            {{ announcement.author.display_name if announcement.author else "—" }}
+            · {{ announcement.published_at|localdate("%d %B %Y") if announcement.published_at else announcement.created_at|localdate }}
+            {% if announcement.scope == "PROJECT" and announcement.project %}
+              · {{ announcement.project.name }}
+            {% endif %}
+          </p>
+ </div>
+ <div class="row row-tight">
+          {% if announcement.is_pinned %}<span class="pill no-dot tone-attention">Pinned</span>{% endif %}
+          {% if announcement.is_recognition %}<span class="pill no-dot">Recognition</span>{% endif %}
+          {% if announcement.id not in read_ids %}<span class="pill no-dot tone-info">Unread</span>{% endif %}
+          {% if announcement.is_expired %}<span class="pill no-dot dim">Expired</span>{% endif %}
+ </div>
+ </div>
+ <div class="panel-body">
+ <p class="small" style="margin:0;">{{ announcement.body|truncate(280) }}</p>
+ </div>
+ <div class="panel-foot">
+ <div class="row row-between">
+ <a class="small" href="{{ url_for('announcements.detail', announcement_id=announcement.id) }}">Read in full</a>
+          {% if can_publish %}
+ <form method="post" action="{{ url_for('announcements.toggle_pin', announcement_id=announcement.id) }}">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm btn-ghost">
+              {{ "Unpin" if announcement.is_pinned else "Pin" }}
+ </button>
+ </form>
+          {% endif %}
+ </div>
+ </div>
+ </article>
+    {% endfor %}
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Announcement pages">
+ <span class="summary">{{ pagination.total }} announcement{{ "s" if pagination.total != 1 else "" }}</span>
+    {% if pagination.has_prev %}<a href="{{ url_for('announcements.index', page=pagination.prev_num) }}">Previous</a>{% endif %}
+ <span class="page" aria-current="page">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}<a href="{{ url_for('announcements.index', page=pagination.next_num) }}">Next</a>{% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="panel">
+  {{ empty_state(
+    "No announcements yet",
+    "Company notices and project updates appear here. Pinned notices stay at the top."
+  ) }}
+</div>
+{% endif %}
+{% endblock %}

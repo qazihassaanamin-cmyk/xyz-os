@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Contribution board{% endblock %}
+
+{% block breadcrumb %}<span>Contribution board</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Contribution board</h1>
+ <p class="subtitle">
+      Recognition, not a ranking of people. Nobody's work is directly comparable —
+      the briefs, the difficulty and the hours available all differ — so the board
+      shows separate categories rather than one score.
+ </p>
+ </div>
+ <div class="page-actions">
+ <a class="btn btn-ghost" href="{{ url_for('xp.index') }}">My contribution</a>
+ </div>
+</div>
+
+<nav class="view-tabs" aria-label="Contribution period">
+ <a class="view-tab" href="{{ url_for('xp.leaderboard', period='lifetime') }}"
+     {% if period == 'lifetime' %}aria-current="page"{% endif %}>Lifetime</a>
+ <a class="view-tab" href="{{ url_for('xp.leaderboard', period='month') }}"
+     {% if period == 'month' %}aria-current="page"{% endif %}>This month</a>
+ <a class="view-tab" href="{{ url_for('xp.leaderboard', period='week') }}"
+     {% if period == 'week' %}aria-current="page"{% endif %}>This week</a>
+</nav>
+
+<div class="split">
+ <div>
+    {# --- Lifetime levels ------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>
+        {% if period == 'lifetime' %}Levels and lifetime contribution
+        {% else %}Contribution in this period{% endif %}
+ </h2>
+ <span class="count">{{ rows|length }} member{{ "s" if rows|length != 1 else "" }}</span>
+ </div>
+
+      {% if rows %}
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <caption>
+          {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
+          {% if not show_totals %}Totals are hidden by the CEO's settings.{% endif %}
+ </caption>
+ <thead>
+ <tr>
+ <th scope="col">Member</th>
+ <th scope="col">Level</th>
+ <th scope="col">Progress to next</th>
+            {% if show_totals %}
+ <th scope="col" class="num">
+              {% if period == 'lifetime' %}Lifetime XP{% else %}XP this period{% endif %}
+ </th>
+            {% endif %}
+ </tr>
+ </thead>
+ <tbody>
+            {% for row in rows %}
+ <tr>
+ <td class="nowrap">
+ <a class="person" href="{{ url_for('team.profile', username=row.user.username) }}">
+ <span class="avatar avatar-sm {{ row.user.username }}">{{ row.user.initials }}</span>
+ <span class="name strong">{{ row.user.display_name }}</span>
+ </a>
+ <span class="pill no-dot">{{ row.user.role_label }}</span>
+ </td>
+ <td class="nowrap">
+ <span class="small">Level {{ row.profile.current_level }}</span>
+ <span class="dim small" style="display:block;">{{ row.profile.level_name }}</span>
+ </td>
+ <td style="min-width:150px;">
+ <div class="progress thin">
+ <span style="width: {{ row.profile.progress_percent }}%"></span>
+ </div>
+ <span class="tiny dim">
+                {{ row.profile.xp_into_level }} / {{ row.profile.xp_into_level + (row.profile.xp_to_next_level or 0) }}
+              </span>
+ </td>
+              {% if show_totals %}
+ <td class="num">
+                {% if period == 'lifetime' %}
+                  {{ row.profile.lifetime_xp }}
+                {% else %}
+                  {{ row.earned }}
+                {% endif %}
+ </td>
+              {% endif %}
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+      {% else %}
+        {{ empty_state("No members to show", "Members appear here once their accounts are active.") }}
+      {% endif %}
+ </section>
+
+    {# --- Separate categories --------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Contribution by category</h2>
+ <span class="count">{{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}</span>
+ </div>
+ <div class="panel-body">
+ <p class="small muted">
+        Four different questions, four separate answers. A member may lead on
+        delivery and not on collaboration, and that is normal.
+      </p>
+ </div>
+
+ <div class="grid-2" style="padding: 0 var(--space-4) var(--space-4);">
+ <div>
+ <p class="field-label">Delivered</p>
+ <p class="field-hint mb-2">Accepted submissions</p>
+ <ol class="stack-2" style="padding-left:18px;margin:0;">
+            {% for row in categories.delivery %}
+ <li class="small">
+ <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+ <span class="numeric dim">{{ row.value }}</span>
+ </li>
+            {% else %}
+ <li class="small dim">No accepted work in this period.</li>
+            {% endfor %}
+ </ol>
+ </div>
+
+ <div>
+ <p class="field-label">First-time quality</p>
+ <p class="field-hint mb-2">Accepted without rework</p>
+ <ol class="stack-2" style="padding-left:18px;margin:0;">
+            {% for row in categories.quality %}
+ <li class="small">
+ <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+ <span class="numeric dim">{{ row.value }}</span>
+ </li>
+            {% else %}
+ <li class="small dim">No reviews in this period.</li>
+            {% endfor %}
+ </ol>
+ </div>
+
+ <div>
+ <p class="field-label">Consistency</p>
+ <p class="field-hint mb-2">Credited focus days</p>
+ <ol class="stack-2" style="padding-left:18px;margin:0;">
+            {% for row in categories.consistency %}
+ <li class="small">
+ <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+ <span class="numeric dim">{{ row.value }}</span>
+ </li>
+            {% else %}
+ <li class="small dim">No focus sessions in this period.</li>
+            {% endfor %}
+ </ol>
+ </div>
+
+ <div>
+ <p class="field-label">Collaboration</p>
+ <p class="field-hint mb-2">Blockers resolved or supported</p>
+ <ol class="stack-2" style="padding-left:18px;margin:0;">
+            {% for row in categories.collaboration %}
+ <li class="small">
+ <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+ <span class="numeric dim">{{ row.value }}</span>
+ </li>
+            {% else %}
+ <li class="small dim">No blockers resolved in this period.</li>
+            {% endfor %}
+ </ol>
+ </div>
+ </div>
+ </section>
+ </div>
+
+ <aside class="rail stack-4">
+    {# --- Recent achievements --------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Recent achievements</h2>
+ <span class="count">Company-wide</span>
+ </div>
+    {% if recent_achievements %}
+ <ul class="list">
+        {% for award in recent_achievements %}
+ <li>
+ <a class="list-row" href="{{ url_for('team.profile', username=award.user.username, tab='achievements') }}">
+ <span class="avatar avatar-sm {{ award.user.username }}">{{ award.user.initials }}</span>
+ <span class="grow">
+ <span class="title">{{ award.display_name }}</span>
+ <span class="meta">
+              <span>{{ award.user.display_name }}</span>
+              <span>{{ award.awarded_at|relative }}</span>
+            </span>
+ </span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+    {% else %}
+ <div class="panel-body">
+ <p class="small muted mb-0">No achievements have been earned yet.</p>
+ </div>
+    {% endif %}
+ </section>
+
+    {# --- My challenges --------------------------------------------- #}
+    {% if challenges %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Your challenges this week</h2>
+ </div>
+ <div class="panel-body">
+ <ul class="stack-4" style="list-style:none;padding:0;margin:0;">
+          {% for row in challenges %}
+ <li>
+ <div class="progress-row">
+ <span>{{ row.challenge.title }}</span>
+ <span>{{ row.progress.current_value }} / {{ row.challenge.target_value }}</span>
+ </div>
+ <div class="progress thin {% if row.is_complete %}gold{% endif %}">
+ <span style="width: {{ row.percent }}%"></span>
+ </div>
+ </li>
+          {% endfor %}
+ </ul>
+ </div>
+ </section>
+    {% endif %}
+
+ <section class="panel">
+ <div class="panel-head"><h2>How to read this board</h2></div>
+ <div class="panel-body">
+ <ul class="small muted" style="padding-left:18px;margin:0;">
+ <li>Levels reflect accumulated verified contribution, nothing else.</li>
+ <li>A level never grants permissions, pay, project ownership or authority over a colleague.</li>
+ <li>Categories are kept separate because a single score would misrepresent the work.</li>
+ <li>XP cannot be earned by signing in, chatting or running a timer without finishing it.</li>
+ <li>The CEO can hide this board entirely while keeping everyone's own progress visible.</li>
+ </ul>
+ </div>
+ </section>
+ </aside>
+</div>
+{% endblock %}
