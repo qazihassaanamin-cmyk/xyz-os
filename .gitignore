@@ -18,9 +18,11 @@ env/
 
 # Local data
 instance/
-uploads/
 *.sqlite
 *.sqlite3
+# User-uploaded files live under app/uploads/files/ — keep the package but ignore the blobs
+/app/uploads/files/
+/app/uploads/downloads/
 
 # Test / tooling caches
 .pytest_cache/

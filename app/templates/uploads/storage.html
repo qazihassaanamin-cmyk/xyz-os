@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}File storage{% endblock %}
+
+{% block breadcrumb %}<span>File storage</span>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>File storage</h1>
+    <p class="subtitle">
+      Uploads, thumbnails and the database share a fixed storage budget. Removing a
+      file hides it immediately; the bytes are only reclaimed after the retention
+      window, so nothing disappears by accident.
+    </p>
+  </div>
+</div>
+
+{% if request.args.get('purged') %}
+<div class="alert alert-success" role="status">
+  <div class="alert-body">
+    {{ request.args.get('purged') }} file(s) permanently removed.
+  </div>
+</div>
+{% endif %}
+
+<div class="stat-strip mb-6">
+  <div class="stat">
+    <span class="label">Total used</span>
+    <span class="value numeric">{{ (usage.total_bytes / 1048576)|round(1) }}</span>
+    <span class="meta">MB of 512 MB budget</span>
+  </div>
+  <div class="stat">
+    <span class="label">Uploads</span>
+    <span class="value numeric">{{ (usage.uploads_bytes / 1048576)|round(1) }}</span>
+    <span class="meta">MB of evidence and images</span>
+  </div>
+  <div class="stat">
+    <span class="label">Thumbnails</span>
+    <span class="value numeric">{{ (usage.thumbnails_bytes / 1048576)|round(1) }}</span>
+    <span class="meta">MB, generated server-side</span>
+  </div>
+  <div class="stat">
+    <span class="label">Database</span>
+    <span class="value numeric">{{ (usage.database_bytes / 1048576)|round(1) }}</span>
+    <span class="meta">MB including the audit log</span>
+  </div>
+  <div class="stat">
+    <span class="label">Budget used</span>
+    <span class="value numeric {% if usage.percent_of_budget > 80 %}attention{% endif %}">
+      {{ usage.percent_of_budget }}%
+    </span>
+    <span class="meta">across all storage</span>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Removed files awaiting purge</h2>
+    <span class="count">{{ candidates|length }}</span>
+  </div>
+
+  {% if candidates %}
+  <div class="table-wrap" style="border:0;border-radius:0;">
+    <table class="data">
+      <caption>
+        These files have already been hidden from their records. Purging removes the
+        bytes from disk and cannot be undone.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">File</th>
+          <th scope="col">Removed by</th>
+          <th scope="col">Removed</th>
+          <th scope="col" class="num">Size</th>
+          <th scope="col"><span class="visually-hidden">Action</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for attachment in candidates %}
+        <tr>
+          <td>
+            <span class="strong">{{ attachment.original_name }}</span>
+            <span class="tiny dim" style="display:block;">
+              {{ attachment.content_type }}
+              {% if attachment.task_id %} · task #{{ attachment.task_id }}{% endif %}
+            </span>
+          </td>
+          <td class="nowrap small muted">
+            {{ attachment.deleted_by.display_name if attachment.deleted_by else "—" }}
+          </td>
+          <td class="nowrap small muted">{{ attachment.deleted_at|relative }}</td>
+          <td class="num">{{ attachment.size_label }}</td>
+          <td class="nowrap">
+            <form method="post" action="{{ url_for('uploads.purge_one', attachment_id=attachment.id) }}"
+              data-confirm="Permanently delete this file? This cannot be undone.">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-danger">Purge</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel-foot">
+    <form method="post" action="{{ url_for('uploads.purge') }}"
+      data-confirm="Purge every removed file past the retention window?">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row row-between">
+        <span class="small muted">
+          Bulk purge only touches files already removed and past the retention window.
+        </span>
+        <button type="submit" class="btn">Purge expired files</button>
+      </div>
+    </form>
+  </div>
+
+  {% else %}
+  {{ empty_state(
+  "Nothing waiting to be purged",
+  "Files you remove are kept for the retention window before their bytes are reclaimed. Nothing is deleted automatically
+  without passing through here."
+  ) }}
+  {% endif %}
+</section>
+
+<div class="notice mt-6">
+  <p class="field-label mb-2">What is never done automatically</p>
+  <p class="small muted mb-0">
+    No file is deleted to free space without a human decision. Evidence attached to
+    an accepted submission stays available to the audit trail even after it leaves
+    the active record.
+  </p>
+</div>
+{% endblock %}
