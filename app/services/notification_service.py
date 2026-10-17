@@ -268,7 +268,7 @@ def suggestion_status_changed(suggestion, new_status: str, actor=None) -> None:
     notify(
         suggestion.author,
         "SUGGESTION_STATUS",
-        title=f"Suggestion {new_status.lower().replace('_', ')}: {suggestion.title}",
+        title=f"Suggestion {new_status.lower().replace('_', ' ')}: {suggestion.title}",
         body=suggestion.decision_note,
         link_endpoint="suggestions.detail",
         link_params=f"suggestion_id={suggestion.id}",
