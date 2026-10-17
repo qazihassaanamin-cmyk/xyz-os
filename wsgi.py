@@ -1,23 +1,33 @@
 """WSGI entry point for PythonAnywhere.
 
-PythonAnywhere runs the WSGI app named by the WSGI_FILE setting in
-/var/www/<username>_tavryc_io/wsgi.py. This file points at the application
-factory, so a deploy is: upload the repo, install requirements, run
-``flask db upgrade`` and ``flask setup``, then set the environment variables
-below.
+Two ways this file is used:
 
-The production guard only fires when this file is loaded as a WSGI app. When
-Flask's CLI imports the module to discover commands, ``FLASK_ENV`` is set to
-something other than ``production`` and the guard is skipped, so a developer
-can run ``flask db migrate`` without first configuring a production secret.
+1. As the repo's ``wsgi.py`` — Flask's CLI imports it to discover commands.
+   ``FLASK_ENV`` is then ``development`` and the guard below is skipped, so
+   ``flask db migrate`` works without a production secret.
+
+2. As the PythonAnywhere WSGI configuration file, copied to
+   ``/var/www/<username>_pythonanywhere_com_wsgi.py``. PA runs it with
+   ``FLASK_ENV`` unset, so the guard fires and the app boots in production
+   mode with a persistent SECRET_KEY generated on first run.
+
+The repo path is resolved from this file's own location first, then from a
+short list of conventional PythonAnywhere locations, so it works whether
+the file sits inside the checkout or in ``/var/www``.
 """
 
 import os
 import sys
 
-# The repo lives next to this file, so it works whether the checkout is at
-# /home/<username>/Tavryc or /home/<username>/xyz-os or anywhere else.
-REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+_CANDIDATES = [
+    os.path.dirname(os.path.abspath(__file__)),
+    os.path.expanduser("~/xyz-os"),
+    os.path.expanduser("~/Tavryc"),
+    "/home/tavrycinc/xyz-os",
+    "/home/tavrycinc/Tavryc",
+]
+
+REPO_DIR = next((p for p in _CANDIDATES if os.path.isdir(os.path.join(p, "app"))), _CANDIDATES[0])
 if REPO_DIR not in sys.path:
     sys.path.insert(0, REPO_DIR)
 

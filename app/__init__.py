@@ -104,9 +104,16 @@ def create_app(config_name: str | None = None) -> Flask:
     _apply_stored_settings(app)
 
     if config_name == "production":
-        try:
-            from app.config import ProductionConfig
+        from app.config import ProductionConfig, ensure_secret_key
 
+        # Materialise a persistent SECRET_KEY if one was not supplied, and
+        # default COOKIE_SECURE to true — PythonAnywhere terminates HTTPS, so
+        # secure cookies are safe there. A deploy that really needs otherwise
+        # can still override both through the environment.
+        ensure_secret_key()
+        os.environ.setdefault("COOKIE_SECURE", "1")
+
+        try:
             ProductionConfig.validate()
         except RuntimeError:
             app.logger.error("Refusing to start with an unsafe production configuration.")

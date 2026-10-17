@@ -185,6 +185,38 @@ class ProductionConfig(BaseConfig):
             raise RuntimeError("Unsafe production configuration: " + " ".join(problems))
 
 
+def ensure_secret_key() -> str:
+    """Return the production SECRET_KEY, creating one on first boot.
+
+    The key is stored in ``<repo>/instance/secret.key`` so it survives
+    restarts and is never committed. It is read before ProductionConfig
+    validates, so a fresh deploy boots cleanly instead of refusing to start.
+    """
+    secret = os.environ.get("SECRET_KEY") or ""
+    if secret and "change-me" not in secret and len(secret) >= 32:
+        return secret
+
+    key_path = os.path.join(BASE_DIR, "instance", "secret.key")
+    try:
+        with open(key_path, "r") as fh:
+            existing = fh.read().strip()
+            if len(existing) >= 32:
+                os.environ["SECRET_KEY"] = existing
+                return existing
+    except OSError:
+        pass
+
+    import secrets as _secrets
+
+    generated = _secrets.token_urlsafe(48)
+    os.makedirs(os.path.dirname(key_path), exist_ok=True)
+    with open(key_path, "w") as fh:
+        fh.write(generated)
+    os.chmod(key_path, 0o600)
+    os.environ["SECRET_KEY"] = generated
+    return generated
+
+
 def normalise_database_url(url: str) -> str:
     """Accept the URL forms hosting providers hand out.
 
