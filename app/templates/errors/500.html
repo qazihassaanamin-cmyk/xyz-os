@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+{% block breadcrumb %}<span>Error</span>{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 620px;">
+ <div class="panel-body">
+ <h1>Something went wrong on our side</h1>
+ <p class="muted">
+      The action was not completed. Nothing you had already saved has been lost.
+      The failure has been written to the server log with a request identifier so
+      it can be traced.
+ </p>
+ <p class="muted small">
+      If it keeps happening, tell the CEO what you were doing and roughly when.
+      That is usually enough to find it in the log.
+ </p>
+ <div class="btn-row mt-6">
+ <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
+ <button type="button" class="btn" onclick="history.back()">Go back</button>
+ </div>
+ </div>
+</div>
+{% endblock %}

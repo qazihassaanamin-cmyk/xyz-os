@@ -13,7 +13,6 @@ import string
 
 from app.extensions import db
 from app.founders import FOUNDERS, INITIAL_PROJECTS
-from app.models.base import utcnow
 from app.models.project import Project, ProjectMember, ProjectRole, ProjectStatus
 from app.models.user import User, UserRole
 from app.services.audit_service import record_audit
@@ -96,8 +95,14 @@ def seed_founders(
         _seed_projects(result)
 
     _link_all_projects_to_ceo()
+    repair_project_leads()
 
     return result
+
+
+PROJECT_LEAD_BY_SLUG: dict[str, str] = {
+    spec["slug"]: spec["lead"] for spec in INITIAL_PROJECTS
+}
 
 
 def _find_existing(spec: dict) -> User | None:
@@ -200,22 +205,24 @@ def _seed_projects(result: SeedResult) -> None:
             slug=spec["slug"],
             description=spec["description"],
             status=spec["status"] if spec["status"] in ProjectStatus.values() else ProjectStatus.PLANNING.value,
-            owner_id=lead.id if lead else None,
-            created_by_id=lead.id if lead else None,
+            # The CEO owns every project by default; a founder may be recorded as
+            # the project's lead through their membership role instead.
+            owner_id=_ceo_id() or (lead.id if lead else None),
+            created_by_id=_ceo_id() or (lead.id if lead else None),
         )
         db.session.add(project)
         db.session.flush()
 
         member_ids: set[int] = set()
-        if lead:
+        if project.owner_id:
             db.session.add(
                 ProjectMember(
                     project_id=project.id,
-                    user_id=lead.id,
+                    user_id=project.owner_id,
                     role_in_project=ProjectRole.LEAD.value,
                 )
             )
-            member_ids.add(lead.id)
+            member_ids.add(project.owner_id)
         for username in spec["members"]:
             member = User.query.filter_by(username=username).first()
             if member and member.id not in member_ids:
@@ -238,6 +245,11 @@ def _seed_projects(result: SeedResult) -> None:
         )
 
 
+def _ceo_id() -> int | None:
+    ceo = User.query.filter_by(role=UserRole.CEO.value).first()
+    return ceo.id if ceo else None
+
+
 def _link_all_projects_to_ceo() -> None:
     """The CEO oversees every project, including ones created later."""
     ceo = User.query.filter_by(role=UserRole.CEO.value).first()
@@ -255,7 +267,55 @@ def _link_all_projects_to_ceo() -> None:
     db.session.commit()
 
 
+def repair_project_leads() -> int:
+    """Ensure every project has exactly one lead and a non-null owner.
+
+    Idempotent. Repairs a project whose owner or lead assignment was lost, and
+    gives the designated founder the LEAD role on their project when they only
+    hold MEMBER. Never creates a second lead.
+    """
+    ceo_id = _ceo_id()
+    repaired = 0
+    for project in Project.query.all():
+        # Every project needs an owner; the CEO oversees all of them.
+        if project.owner_id is None and ceo_id is not None:
+            project.owner_id = ceo_id
+            repaired += 1
+        desired_lead_id = ceo_id
+        lead_username = PROJECT_LEAD_BY_SLUG.get(project.slug)
+        if lead_username:
+            founder = User.query.filter_by(username=lead_username).first()
+            if founder is not None:
+                desired_lead_id = founder.id
+        existing_lead = next(
+            (m for m in project.members if m.role_in_project == ProjectRole.LEAD.value),
+            None,
+        )
+        if existing_lead is None:
+            target_id = desired_lead_id or project.owner_id
+            if target_id is None:
+                continue
+            membership = ProjectMember.query.filter_by(
+                project_id=project.id, user_id=target_id
+            ).first()
+            if membership is not None:
+                membership.role_in_project = ProjectRole.LEAD.value
+            else:
+                db.session.add(
+                    ProjectMember(
+                        project_id=project.id,
+                        user_id=target_id,
+                        role_in_project=ProjectRole.LEAD.value,
+                    )
+                )
+            repaired += 1
+    if repaired:
+        db.session.commit()
+    return repaired
+
+
 def _ensure_project_lead(project: Project, user: User) -> None:
+    """Give ``user`` the LEAD role on ``project``, adding them if needed."""
     if user.id in project.member_ids:
         for membership in project.members:
             if membership.user_id == user.id:
@@ -269,3 +329,4 @@ def _ensure_project_lead(project: Project, user: User) -> None:
                 role_in_project=ProjectRole.LEAD.value,
             )
         )
+    db.session.commit()

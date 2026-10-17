@@ -1,0 +1,24 @@
+{#
+  Notification list.
+
+  Rendered inside the bell dropdown. Each item is a POST form so that opening a
+  notification marks it read server-side rather than relying on the client.
+#}
+{% if unread_notifications is defined and unread_notifications %}
+  {# The dropdown loads its own items via /notifications/recent so the page
+     render stays cheap; this is the fallback for a no-JavaScript browser. #}
+{% endif %}
+
+<ul class="list" data-notification-items>
+ <li>
+    <a class="list-row" href="{{ url_for('notifications.index') }}">
+      <span class="grow">
+        <span class="title">Open the notification list</span>
+        <span class="meta">
+          <span>{% if unread_notifications %}{{ unread_notifications }} unread{% else %}All read{% endif %}</span>
+          <span>Newest first</span>
+        </span>
+      </span>
+    </a>
+ </li>
+</ul>

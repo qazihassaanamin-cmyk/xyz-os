@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Not permitted{% endblock %}
+{% block breadcrumb %}<span>Not permitted</span>{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 620px;">
+ <div class="panel-body">
+ <h1>You do not have access to this</h1>
+ <p class="muted">
+      Your account is signed in, but this page or action is outside what your role
+      allows. If you believe you should have access, ask the CEO to review your
+      project membership or role.
+ </p>
+ <div class="btn-row mt-6">
+ <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
+ <a class="btn" href="{{ url_for('tasks.index') }}">My tasks</a>
+ </div>
+ </div>
+</div>
+{% endblock %}

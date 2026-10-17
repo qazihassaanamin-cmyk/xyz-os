@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% from "partials/_task_row.html" import task_line %}
+{% from "partials/_status_pill.html" import status_pill, priority_mark, due_mark %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}My dashboard{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Good to see you, {{ current_user.full_name.split()[0] if current_user.full_name else current_user.username }}</h1>
+ <p class="subtitle">
+      {{ daily.date|localdate("%A, %d %B %Y") }} ·
+      {% if not daily.editable %}Today's record is closed.{% else %}Daily records are open until {{ "%02d"|format(daily.cutoff_hour) }}:59.{% endif %}
+ </p>
+ </div>
+ <div class="page-actions">
+    {% if not daily.checkin %}
+ <a class="btn btn-primary" href="{{ url_for('daily.index') }}#checkin">Add today's check-in</a>
+    {% elif not daily.report %}
+ <a class="btn" href="{{ url_for('daily.index') }}#report">Write today's report</a>
+    {% endif %}
+    {% if focus_stats.credited_today %}
+ <a class="btn" href="{{ url_for('focus.index') }}">Focus session done — start another</a>
+    {% else %}
+ <a class="btn" href="{{ url_for('focus.index') }}">Start a focus session</a>
+    {% endif %}
+ </div>
+</div>
+
+{# --- Attention first: what actually needs this person today ------------ #}
+
+{% if buckets.overdue or buckets.needs_acknowledgement or recent_feedback or open_blockers %}
+<div class="alert alert-warning" role="status">
+ <div class="alert-body">
+ <strong>Needs your attention</strong>
+ <span class="small">
+      {% if buckets.overdue %}{{ buckets.overdue|length }} overdue task{{ "s" if buckets.overdue|length != 1 else "" }}. {% endif %}
+      {% if recent_feedback %}{{ recent_feedback|length }} submission{{ "s" if recent_feedback|length != 1 else "" }} returned for changes. {% endif %}
+      {% if buckets.needs_acknowledgement %}{{ buckets.needs_acknowledgement|length }} task{{ "s" if buckets.needs_acknowledgement|length != 1 else "" }} you have not acknowledged. {% endif %}
+      {% if open_blockers %}{{ open_blockers|length }} blocker{{ "s" if open_blockers|length != 1 else "" }} you raised still open.{% endif %}
+ </span>
+ </div>
+</div>
+{% endif %}
+
+<div class="split">
+ <div>
+    {# --- Today ------------------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Due today</h2>
+ <span class="count">{{ buckets.today|length }}</span>
+ </div>
+      {% if buckets.today %}
+ <ul class="list">
+          {% for task in buckets.today %}{{ task_line(task) }}{% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state(
+          "Nothing is due today",
+          "Tasks you own with today's deadline appear here. If you have capacity, take something from the backlog.",
+          url_for('tasks.index', view='assigned'),
+          "Open my task list"
+        ) }}
+      {% endif %}
+ </section>
+
+    {# --- Overdue ----------------------------------------------------- #}
+    {% if buckets.overdue %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Overdue</h2>
+ <span class="count">{{ buckets.overdue|length }}</span>
+ </div>
+ <ul class="list">
+        {% for task in buckets.overdue %}{{ task_line(task) }}{% endfor %}
+ </ul>
+ <div class="panel-foot">
+        Overdue means the deadline has passed. Update the deadline if the plan has
+        genuinely changed, rather than letting the record drift.
+ </div>
+ </section>
+    {% endif %}
+
+    {# --- High priority ---------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>High priority</h2>
+ <span class="count">{{ buckets.high_priority|length }}</span>
+ </div>
+      {% if buckets.high_priority %}
+ <ul class="list">
+          {% for task in buckets.high_priority %}{{ task_line(task) }}{% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state("No high-priority work is assigned to you", "Anything marked High or Critical and still open would appear here.") }}
+      {% endif %}
+ </section>
+
+    {# --- Awaiting my review ----------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Waiting for my review</h2>
+ <span class="count">{{ buckets.awaiting_review|length }}</span>
+ </div>
+      {% if buckets.awaiting_review %}
+ <div class="table-wrap">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Task</th>
+ <th scope="col">Submitted by</th>
+ <th scope="col">Waiting since</th>
+ <th scope="col"><span class="visually-hidden">Action</span></th>
+ </tr>
+ </thead>
+ <tbody>
+              {% for task in buckets.awaiting_review %}
+              {% set submission = task.pending_submission %}
+ <tr>
+ <td><a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a></td>
+ <td class="nowrap">
+                    {% if submission and submission.submitted_by %}
+                      {{ submission.submitted_by.display_name }}
+                    {% else %}<span class="dim">—</span>{% endif %}
+ </td>
+ <td class="nowrap small muted">
+                    {{ submission.created_at|relative if submission else "—" }}
+ </td>
+ <td class="nowrap">
+ <a class="btn btn-sm" href="{{ url_for('tasks.detail', task_id=task.id) }}#submissions">Review</a>
+ </td>
+ </tr>
+              {% endfor %}
+ </tbody>
+ </table>
+ </div>
+      {% else %}
+        {{ empty_state("Nothing is waiting for you", "When a colleague submits work with you as reviewer, it appears here with their evidence.") }}
+      {% endif %}
+ </section>
+
+    {# --- My submissions under review -------------------------------- #}
+    {% if buckets.pending_submissions %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>My submissions under review</h2>
+ <span class="count">{{ buckets.pending_submissions|length }}</span>
+ </div>
+ <ul class="list">
+        {% for submission in buckets.pending_submissions %}
+ <li>
+ <a class="list-row" href="{{ url_for('tasks.detail', task_id=submission.task_id) }}#submissions">
+ <span class="grow">
+ <span class="title">{{ submission.task.title if submission.task else "Task" }}</span>
+ <span class="meta">
+                <span>Revision {{ submission.revision_number }}</span>
+                <span>Submitted {{ submission.created_at|relative }}</span>
+                {% if submission.external_link %}<span>Has a link</span>{% endif %}
+              </span>
+ </span>
+ <span class="trail">{{ status_pill("PENDING") }}</span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+ </section>
+    {% endif %}
+
+    {# --- Feedback returned ------------------------------------------ #}
+    {% if recent_feedback %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Returned for changes</h2>
+ <span class="count">{{ recent_feedback|length }}</span>
+ </div>
+ <ul class="list">
+        {% for submission in recent_feedback %}
+        {% set review = submission.latest_review %}
+ <li>
+ <a class="list-row" href="{{ url_for('tasks.detail', task_id=submission.task_id) }}#submissions">
+ <span class="grow">
+ <span class="title">{{ submission.task.title if submission.task else "Task" }}</span>
+ <span class="meta">
+                {% if review and review.reviewer %}<span>{{ review.reviewer.display_name }}</span>{% endif %}
+                <span>{{ submission.updated_at|relative }}</span>
+              </span>
+              {% if review and review.feedback %}
+ <span class="meta"><span>{{ review.feedback|truncate(160) }}</span></span>
+              {% endif %}
+ </span>
+ <span class="trail">{{ status_pill("CHANGES_REQUESTED") }}</span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+ </section>
+    {% endif %}
+
+    {# --- Upcoming --------------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Coming up</h2>
+ <span class="count">{{ buckets.upcoming|length }}</span>
+ </div>
+      {% if buckets.upcoming %}
+ <ul class="list">
+          {% for task in buckets.upcoming %}{{ task_line(task) }}{% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state("No upcoming deadlines", "Tasks with a deadline in the next days appear here so you can plan around them.") }}
+      {% endif %}
+ </section>
+
+    {# --- Projects and milestones ------------------------------------ #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>My projects</h2>
+ <span class="count">{{ projects|length }}</span>
+ </div>
+      {% if projects %}
+ <div class="table-wrap">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Project</th>
+ <th scope="col">My role</th>
+ <th scope="col">Status</th>
+ <th scope="col">Milestones open</th>
+ </tr>
+ </thead>
+ <tbody>
+            {% for membership in projects %}
+ <tr>
+ <td><a class="strong" href="{{ url_for('projects.detail', project_id=membership.project.id) }}">{{ membership.project.name }}</a></td>
+ <td class="nowrap">{{ membership.role_in_project|title }}</td>
+ <td class="nowrap">{{ status_pill(membership.project.status) }}</td>
+ <td class="num">
+                {% set open_milestones = membership.project.milestones|rejectattr("status", "equalto", "COMPLETED")|list %}
+                {{ open_milestones|length }}
+ </td>
+ </tr>
+            {% endfor %}
+ </tbody>
+ </table>
+ </div>
+      {% else %}
+        {{ empty_state("You are not on a project yet", "The CEO adds members to projects. Ask to be included in the work you want to contribute to.") }}
+      {% endif %}
+ </section>
+
+    {% if milestones %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Open milestones</h2>
+ <span class="count">{{ milestones|length }}</span>
+ </div>
+ <ul class="list">
+        {% for milestone in milestones %}
+ <li>
+ <a class="list-row" href="{{ url_for('projects.detail', project_id=milestone.project_id) }}#milestones">
+ <span class="grow">
+ <span class="title">{{ milestone.title }}</span>
+ <span class="meta">
+                <span>{{ milestone.project.name }}</span>
+                {% if milestone.due_date %}
+                  <span class="due-{{ 'overdue' if milestone.is_overdue else 'later' }}">
+                    {{ milestone.due_date|localdate("%d %b") }}
+                  </span>
+                {% endif %}
+              </span>
+ </span>
+ <span class="trail">{{ status_pill(milestone.status) }}</span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+ </section>
+    {% endif %}
+ </div>
+
+  {# --- Right column: standing, focus and recent activity -------------- #}
+ <aside class="rail stack-4">
+    {% include "partials/_xp_panel.html" %}
+
+    {# --- Focus ------------------------------------------------------ #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Focus</h2>
+ <a class="tiny" href="{{ url_for('focus.history') }}">History</a>
+ </div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Completed today</dt>
+ <dd>
+            {{ focus_stats.completed_today }}
+            {% if focus_stats.credited_today %}
+ <span class="pill pill-completed">Daily credit earned</span>
+            {% else %}
+ <span class="dim">— daily credit still available</span>
+            {% endif %}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>This week</dt>
+ <dd>
+            {{ focus_stats.credited_this_week }} of {{ focus_stats.working_days_this_week }}
+            working days ({{ focus_stats.completion_rate }}%)
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>Total recorded, 30 days</dt>
+ <dd>{{ focus_stats.total_minutes }} minutes across {{ focus_stats.completed_total }} sessions</dd>
+ </div>
+ </dl>
+ <p class="tiny dim mt-4 mb-0">
+        A recorded session means a timer ran to completion. It is not a measure of
+        attention or output.
+ </p>
+ </div>
+ </section>
+
+    {# --- Daily record ----------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Today's record</h2>
+ <a class="tiny" href="{{ url_for('daily.history') }}">History</a>
+ </div>
+ <div class="panel-body">
+ <dl class="facts">
+ <div class="fact">
+ <dt>Check-in</dt>
+ <dd>
+            {% if daily.checkin %}
+ <span class="tone-positive">Submitted</span>
+ <span class="dim">· {{ daily.checkin.created_at|relative }}</span>
+            {% else %}
+ <span class="tone-attention">Not yet submitted</span>
+            {% endif %}
+ </dd>
+ </div>
+ <div class="fact">
+ <dt>End-of-day report</dt>
+ <dd>
+            {% if daily.report %}
+ <span class="tone-positive">Submitted</span>
+              {% if daily.report.revision_count %}
+ <span class="dim">· edited {{ daily.report.revision_count }} time{{ "s" if daily.report.revision_count != 1 else "" }}</span>
+              {% endif %}
+            {% else %}
+ <span class="tone-attention">Not yet submitted</span>
+            {% endif %}
+ </dd>
+ </div>
+ </dl>
+ <a class="btn btn-sm mt-4" href="{{ url_for('daily.index') }}">Open today's record</a>
+ </div>
+ </section>
+
+    {# --- Blockers --------------------------------------------------- #}
+    {% if open_blockers %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>My open blockers</h2>
+ <span class="count">{{ open_blockers|length }}</span>
+ </div>
+ <ul class="list">
+        {% for blocker in open_blockers %}
+ <li>
+ <a class="list-row" href="{{ url_for('tasks.blockers') }}">
+ <span class="grow">
+ <span class="title">{{ blocker.description|truncate(70) }}</span>
+ <span class="meta">
+                <span>{{ blocker.kind|replace("_", " ")|title }}</span>
+                <span>{{ blocker.created_at|relative }}</span>
+                {% if blocker.assigned_to %}<span>{{ blocker.assigned_to.display_name }} is helping</span>{% endif %}
+              </span>
+ </span>
+ <span class="trail">{{ status_pill(blocker.status) }}</span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+ </section>
+    {% endif %}
+
+    {# --- Recent activity ------------------------------------------- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Recent contribution</h2>
+ <a class="tiny" href="{{ url_for('team.profile', username=current_user.username, tab='activity') }}">Full history</a>
+ </div>
+      {% if activity %}
+ <ul class="timeline" style="padding: var(--space-4);">
+          {% for entry in activity %}
+ <li class="tone-{{ entry.tone }}">
+ <p class="what">{{ entry.title }}</p>
+              {% if entry.detail %}<p class="detail">{{ entry.detail|truncate(140) }}</p>{% endif %}
+ <p class="when">{{ entry.relative }}</p>
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state("No recorded contribution yet", "Accepted work, focus sessions and achievements will appear here as you use the platform.") }}
+      {% endif %}
+ </section>
+ </aside>
+</div>
+{% endblock %}

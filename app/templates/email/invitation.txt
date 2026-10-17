@@ -1,0 +1,14 @@
+You have been invited to {{ company_name }}
+
+{{ email }} has been invited to the {{ company_name }} internal platform as
+{{ invited_by.role|title if invited_by else "a member" }}.
+
+Set your password using the link below. It expires in {{ expires_hours }} hours
+and can only be used once:
+
+{{ link }}
+
+Choose a password of at least 12 characters containing a letter and a number.
+Nobody at {{ company_name }} can read your password after you set it.
+
+If you were not expecting this invitation, ignore this message and tell the CEO.

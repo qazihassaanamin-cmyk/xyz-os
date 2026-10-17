@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Not found{% endblock %}
+{% block breadcrumb %}<span>Not found</span>{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 620px;">
+ <div class="panel-body">
+ <h1>Nothing here</h1>
+ <p class="muted">
+      That page does not exist, or it refers to a record you cannot see. Records
+      outside your projects and assignments are not shown, so a link a colleague
+      shared may simply be out of your scope.
+ </p>
+ <div class="btn-row mt-6">
+ <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Go to my dashboard</a>
+ <a class="btn" href="{{ url_for('tasks.index') }}">My tasks</a>
+ <a class="btn" href="{{ url_for('projects.index') }}">Projects</a>
+ </div>
+ </div>
+</div>
+{% endblock %}

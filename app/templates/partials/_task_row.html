@@ -1,0 +1,73 @@
+{#
+  A single task row.
+
+  Rendered as a table row by the task list and as a list row by dashboards, so
+  the markup is a set of cells rather than a fixed element. Density is the point:
+  this is the most frequently scanned object in the application.
+#}
+{% from "partials/_status_pill.html" import status_pill, priority_mark, due_mark, difficulty_mark %}
+
+{% macro task_row(task, show_project=True, show_assignee=True) %}
+<tr>
+ <td>
+    <a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a>
+    {% if task.open_blockers %}
+      <span class="pill pill-blocked">Blocked</span>
+    {% endif %}
+    {% if task.can_be_acknowledged_by(current_user) %}
+      <span class="pill no-dot tone-attention">Needs acknowledgement</span>
+    {% endif %}
+    {% if task.subtasks %}
+      <div class="progress-row" style="max-width: 220px; margin-top: 6px;">
+        <span>{{ task.done_subtask_count }} of {{ len(task.subtasks) }} steps</span>
+        <span>{{ task.checklist_progress }}%</span>
+      </div>
+      <div class="progress thin"><span style="width: {{ task.checklist_progress }}%"></span></div>
+    {% endif %}
+ </td>
+  {% if show_project %}
+ <td class="nowrap">
+      {% if task.project %}
+        <a href="{{ url_for('projects.detail', project_id=task.project.id) }}">{{ task.project.name }}</a>
+      {% else %}
+        <span class="dim">—</span>
+      {% endif %}
+ </td>
+  {% endif %}
+  {% if show_assignee %}
+ <td class="nowrap">
+      {% if task.assignee %}
+        <span class="person">
+          <span class="avatar avatar-sm {{ task.assignee.username }}">{{ task.assignee.initials }}</span>
+          <span class="name">{{ task.assignee.display_name }}</span>
+        </span>
+      {% else %}
+        <span class="dim">Unassigned</span>
+      {% endif %}
+ </td>
+  {% endif %}
+ <td class="nowrap">{{ status_pill(task.status) }}</td>
+ <td class="nowrap">{{ priority_mark(task.priority) }}</td>
+ <td class="nowrap">{{ due_mark(task) }}</td>
+</tr>
+{% endmacro %}
+
+{# The same task as a compact list row, for dashboard panels. #}
+{% macro task_line(task, show_project=True) %}
+<li>
+ <a class="list-row" href="{{ url_for('tasks.detail', task_id=task.id) }}">
+    <span class="avatar avatar-sm {{ task.assignee.username if task.assignee else '' }}">
+      {{ task.assignee.initials if task.assignee else "—" }}
+    </span>
+    <span class="grow">
+      <span class="title">{{ task.title }}</span>
+      <span class="meta">
+        {% if show_project and task.project %}<span>{{ task.project.name }}</span>{% endif %}
+        <span>{{ task.priority|title }} priority</span>
+        {% if task.due_date %}<span class="due-{{ task.due_state }}">{{ deadline_label(task.due_date) }}</span>{% endif %}
+      </span>
+    </span>
+    <span class="trail">{{ status_pill(task.status) }}</span>
+ </a>
+</li>
+{% endmacro %}

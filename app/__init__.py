@@ -61,7 +61,7 @@ def create_app(config_name: str | None = None) -> Flask:
             app.logger.error("Refusing to start with an unsafe production configuration.")
             raise
 
-    app.logger.info("XYZ OS started in %s mode", config_name)
+    app.logger.info("%s started in %s mode", app.config.get("COMPANY_NAME", "Tavryc"), config_name)
     return app
 
 
@@ -102,28 +102,28 @@ def _init_extensions(app: Flask) -> None:
 
 
 def _init_blueprints(app: Flask) -> None:
-    from app.auth import bp as auth_bp
-    from app.main import bp as main_bp
-    from app.dashboard import bp as dashboard_bp
-    from app.projects import bp as projects_bp
-    from app.tasks import bp as tasks_bp
-    from app.focus import bp as focus_bp
-    from app.daily import bp as daily_bp
-    from app.team import bp as team_bp
-    from app.notifications import bp as notifications_bp
-    from app.uploads import bp as uploads_bp
-    from app.suggestions import bp as suggestions_bp
-    from app.lounge import bp as lounge_bp
     from app.announcements import bp as announcements_bp
-    from app.knowledge import bp as knowledge_bp
-    from app.xp import bp as xp_bp
+    from app.auth import bp as auth_bp
     from app.ceo import bp as ceo_bp
+    from app.daily import bp as daily_bp
+    from app.dashboard import bp as dashboard_bp
+    from app.focus import bp as focus_bp
+    from app.knowledge import bp as knowledge_bp
+    from app.lounge import bp as lounge_bp
+    from app.main import bp as main_bp
+    from app.notifications import bp as notifications_bp
+    from app.projects import bp as projects_bp
+    from app.suggestions import bp as suggestions_bp
+    from app.tasks import bp as tasks_bp
+    from app.team import bp as team_bp
+    from app.uploads import bp as uploads_bp
+    from app.xp import bp as xp_bp
 
-    app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
-    app.register_blueprint(projects_bp, url_prefix="/projects")
     app.register_blueprint(tasks_bp, url_prefix="/tasks")
+    app.register_blueprint(projects_bp, url_prefix="/projects")
     app.register_blueprint(focus_bp, url_prefix="/focus")
     app.register_blueprint(daily_bp, url_prefix="/daily")
     app.register_blueprint(team_bp, url_prefix="/team")
@@ -302,16 +302,27 @@ def _init_template_globals(app: Flask) -> None:
         from app.services.notification_service import unread_count_for
 
         count = 0
+        nav_state = {
+            "task_open_count": 0,
+            "review_count": 0,
+            "focus_running": False,
+            "checkin_done": False,
+            "attention_count": 0,
+            "leading_projects": [],
+        }
         if _is_signed_in():
             try:
                 count = unread_count_for(current_user)
-            except Exception:  # pragma: no cover
-                count = 0
+                nav_state = _nav_state_for(current_user)
+            except Exception:  # pragma: no cover - never break a render
+                app.logger.exception("Could not build navigation state")
+
         return {
-            "company_name": current_app.config.get("COMPANY_NAME", "XYZ Ltd."),
+            "company_name": current_app.config.get("COMPANY_NAME", "Tavryc"),
             "current_year": utcnow().year,
             "unread_notifications": count,
             "nav_active": request.endpoint or "",
+            **nav_state,
         }
 
     @app.template_filter("localdate")
@@ -345,6 +356,67 @@ def _init_template_globals(app: Flask) -> None:
     @app.template_filter("initials")
     def _initials(user):
         return getattr(user, "initials", "?")
+
+
+def _nav_state_for(user) -> dict:
+    """Counts shown in the sidebar.
+
+    Each count is a bounded query, and every one is scoped to what the member
+    may actually see. The CEO's attention count reuses the same query the
+    command centre uses so the number always matches the page.
+    """
+    from app.models.project import ProjectMember, ProjectRole
+    from app.models.task import Submission, SubmissionStatus, Task, TaskStatus
+    from app.services import daily_service, focus_service, report_service
+    from app.services.task_service import overdue_tasks_query, visible_tasks_query
+
+    state = {
+        "task_open_count": 0,
+        "review_count": 0,
+        "focus_running": False,
+        "checkin_done": False,
+        "attention_count": 0,
+        "leading_projects": [],
+    }
+
+    state["task_open_count"] = (
+        visible_tasks_query(user, include_completed=False)
+        .filter(Task.assignee_id == user.id)
+        .count()
+    )
+
+    if user.is_ceo:
+        state["review_count"] = Submission.query.filter(
+            Submission.status == SubmissionStatus.PENDING.value
+        ).count()
+    else:
+        state["review_count"] = Submission.query.filter(
+            Submission.status == SubmissionStatus.PENDING.value,
+            Submission.task.has(Task.reviewer_id == user.id),
+        ).count()
+
+    state["focus_running"] = focus_service.current_session(user) is not None
+    state["checkin_done"] = daily_service.get_checkin(user) is not None
+
+    if user.is_ceo:
+        state["attention_count"] = report_service.attention_queue(limit=50)["total"]
+    else:
+        state["attention_count"] = (
+            overdue_tasks_query(user).filter(Task.assignee_id == user.id).count()
+        )
+
+    state["leading_projects"] = (
+        ProjectMember.query.filter_by(
+            user_id=user.id, role_in_project=ProjectRole.LEAD.value
+        )
+        .join(ProjectMember.project)
+        .filter(db.text("projects.status != 'ARCHIVED'"))
+        .limit(6)
+        .all()
+    )
+    state["leading_projects"] = [row.project for row in state["leading_projects"]]
+
+    return state
 
 
 def _is_signed_in() -> bool:

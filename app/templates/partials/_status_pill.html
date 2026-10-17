@@ -1,0 +1,49 @@
+{# Status pill. Colour plus a text label, so status is never conveyed by colour alone. #}
+{% macro status_pill(status) %}
+  {% set value = (status or "")|lower %}
+ <span class="pill pill-{{ value }}">{{ (status or "—")|replace("_", " ")|title }}</span>
+{% endmacro %}
+
+{# Priority mark: a small bar plus the word. #}
+{% macro priority_mark(priority) %}
+  {% set value = (priority or "NORMAL")|lower %}
+ <span class="priority priority-{{ value }}">{{ (priority or "NORMAL")|title }}</span>
+{% endmacro %}
+
+{# Difficulty, with the XP it is worth when the work is accepted. #}
+{% macro difficulty_mark(difficulty, base_xp=None) %}
+ <span class="difficulty">
+    {{ (difficulty or "MEDIUM")|title }}
+    {% if base_xp is not none and base_xp is defined %}
+      {% set multiplier = {"SMALL": 40, "MEDIUM": 100, "LARGE": 200, "CRITICAL": 350} %}
+      {% set worth = (base_xp * multiplier.get((difficulty or "MEDIUM")|upper, 100) / 100)|round|int %}
+      · {{ worth }} XP
+    {% endif %}
+ </span>
+{% endmacro %}
+
+{# Deadline, always with a word so the meaning is clear without colour. #}
+{% macro due_mark(task) %}
+  {% if task.status == "COMPLETED" %}
+    <span class="due due-completed">
+      Completed {{ task.completed_at|localdate("%d %b") if task.completed_at else "" }}
+    </span>
+  {% elif task.due_date %}
+    <span class="due due-{{ task.due_state }}">{{ deadline_label(task.due_date) }}</span>
+  {% else %}
+    <span class="due due-none">No deadline</span>
+  {% endif %}
+{% endmacro %}
+
+{# Submission state. #}
+{% macro submission_pill(status) %}
+  {% set value = (status or "")|lower %}
+ <span class="pill pill-{{ value }}">{{ (status or "—")|replace("_", " ")|title }}</span>
+{% endmacro %}
+
+{# A signed XP amount with a sign, so a deduction is unmistakable. #}
+{% macro xp_amount(amount) %}
+ <span class="xp-amount {{ 'positive' if amount > 0 else 'negative' }}">
+    {{ "+" if amount > 0 else "" }}{{ amount }}
+ </span>
+{% endmacro %}

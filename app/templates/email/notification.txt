@@ -1,0 +1,8 @@
+{{ summary }}
+
+Open {{ company_name }} to see the full record:
+
+{{ link }}
+
+You are receiving this because notification emails are switched on. You can turn
+them off in Settings, or ask the CEO to.

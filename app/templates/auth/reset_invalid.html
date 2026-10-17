@@ -1,0 +1,16 @@
+{% extends "layout/auth.html" %}
+
+{% block title %}Link expired{% endblock %}
+
+{% block content %}
+<h1>That link is no longer valid</h1>
+<p class="lede">
+  Password reset links can only be used once, and they expire after 60 minutes.
+  This one has been used already, has expired, or was replaced by a newer request.
+</p>
+
+<div class="btn-row mt-6">
+ <a class="btn btn-primary" href="{{ url_for('auth.forgot_password') }}">Request a new link</a>
+ <a class="btn" href="{{ url_for('auth.login') }}">Back to sign in</a>
+</div>
+{% endblock %}

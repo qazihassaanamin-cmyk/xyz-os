@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% from "partials/_status_pill.html" import status_pill, priority_mark, due_mark, xp_amount %}
+{% from "partials/_empty_state.html" import empty_state %}
+
+{% block title %}Command centre{% endblock %}
+{% block content_class %}content{% endblock %}
+
+{% block breadcrumb %}
+ <span>Command centre</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+ <div>
+ <h1>Command centre</h1>
+ <p class="subtitle">
+      What needs attention first, then the company's figures for
+      {{ start|localdate("%d %b") }} – {{ end|localdate("%d %b %Y") }}.
+      Every number links to the records behind it.
+ </p>
+ </div>
+ <div class="page-actions">
+ <form method="get" action="{{ url_for('dashboard.ceo') }}" class="row row-tight">
+ <label class="visually-hidden" for="range">Date range</label>
+ <select id="range" name="days" style="width:auto;">
+        {% for option in [7, 30, 90, 180] %}
+ <option value="{{ option }}" {% if days == option %}selected{% endif %}>Last {{ option }} days</option>
+        {% endfor %}
+ </select>
+ <label class="visually-hidden" for="project-filter">Project</label>
+ <select id="project-filter" name="project" style="width:auto;">
+ <option value="">All projects</option>
+        {% for project in projects %}
+ <option value="{{ project.id }}" {% if selected_project and selected_project.id == project.id %}selected{% endif %}>{{ project.name }}</option>
+        {% endfor %}
+ </select>
+ <label class="visually-hidden" for="member-filter">Member</label>
+ <select id="member-filter" name="member" style="width:auto;">
+ <option value="">All members</option>
+        {% for member in members %}
+ <option value="{{ member.id }}" {% if selected_member and selected_member.id == member.id %}selected{% endif %}>{{ member.display_name }}</option>
+        {% endfor %}
+ </select>
+ <button type="submit" class="btn">Apply</button>
+ </form>
+ </div>
+</div>
+
+<div class="split">
+  {# ================= LEFT: the attention queue ======================= #}
+ <div>
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Attention queue</h2>
+ <span class="count">{{ queue.total }} item{{ "s" if queue.total != 1 else "" }}</span>
+ </div>
+
+      {% if queue.total == 0 %}
+        {{ empty_state(
+          "Nothing needs attention",
+          "No overdue work, no submissions waiting, no open blockers and every member has checked in today."
+        ) }}
+      {% else %}
+
+        {# --- Overdue work: the most urgent, so it comes first --- #}
+        {% if queue.overdue_tasks %}
+ <div class="panel-head" style="border-top: 0;">
+ <h3 style="margin:0;font-size:var(--text-sm);">
+ <span class="tone-critical">Overdue</span>
+ <span class="count">{{ queue.overdue_tasks|length }}</span>
+ </h3>
+ <a class="tiny" href="{{ url_for('dashboard.attention', kind='overdue') }}">Open the full list</a>
+ </div>
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Task</th>
+ <th scope="col">Owner</th>
+ <th scope="col">Project</th>
+ <th scope="col">Deadline</th>
+ <th scope="col">Priority</th>
+ </tr>
+ </thead>
+ <tbody>
+              {% for task in queue.overdue_tasks %}
+ <tr>
+ <td><a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a></td>
+ <td class="nowrap">
+                  {% if task.assignee %}
+ <a href="{{ url_for('team.profile', username=task.assignee.username) }}">{{ task.assignee.display_name }}</a>
+                  {% else %}<span class="dim">Unassigned</span>{% endif %}
+ </td>
+ <td class="nowrap">
+                  {% if task.project %}{{ task.project.name }}{% else %}<span class="dim">—</span>{% endif %}
+ </td>
+ <td class="nowrap">{{ due_mark(task) }}</td>
+ <td class="nowrap">{{ priority_mark(task.priority) }}</td>
+ </tr>
+              {% endfor %}
+ </tbody>
+ </table>
+ </div>
+        {% endif %}
+
+        {# --- Awaiting review --- #}
+        {% if queue.awaiting_review %}
+ <div class="panel-head">
+ <h3 style="margin:0;font-size:var(--text-sm);">
+            Work awaiting review
+ <span class="count">{{ queue.awaiting_review|length }}</span>
+ </h3>
+ <a class="tiny" href="{{ url_for('tasks.review_queue') }}">Review queue</a>
+ </div>
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <thead>
+ <tr>
+ <th scope="col">Task</th>
+ <th scope="col">Submitted by</th>
+ <th scope="col">Reviewer</th>
+ <th scope="col">Waiting</th>
+ <th scope="col"><span class="visually-hidden">Action</span></th>
+ </tr>
+ </thead>
+ <tbody>
+              {% for submission in queue.awaiting_review %}
+              {% set task = submission.task %}
+ <tr>
+ <td>
+                  {% if task %}
+ <a class="strong" href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a>
+                  {% else %}<span class="dim">Removed task</span>{% endif %}
+ </td>
+ <td class="nowrap">
+                  {% if submission.submitted_by %}{{ submission.submitted_by.display_name }}{% else %}<span class="dim">—</span>{% endif %}
+ </td>
+ <td class="nowrap">
+                  {% if task and task.reviewer %}{{ task.reviewer.display_name }}
+                  {% else %}<span class="tone-attention">Unassigned</span>{% endif %}
+ </td>
+ <td class="nowrap small muted">{{ submission.created_at|relative }}</td>
+ <td class="nowrap">
+                  {% if task %}
+ <a class="btn btn-sm" href="{{ url_for('tasks.detail', task_id=task.id) }}#submissions">Review</a>
+                  {% endif %}
+ </td>
+ </tr>
+              {% endfor %}
+ </tbody>
+ </table>
+ </div>
+        {% endif %}
+
+        {# --- Blockers --- #}
+        {% if queue.open_blockers %}
+ <div class="panel-head">
+ <h3 style="margin:0;font-size:var(--text-sm);">
+            Open blockers
+ <span class="count">{{ queue.open_blockers|length }}</span>
+ </h3>
+ <a class="tiny" href="{{ url_for('tasks.blockers') }}">All blockers</a>
+ </div>
+ <ul class="list">
+            {% for blocker in queue.open_blockers %}
+ <li>
+ <div class="list-row">
+ <span class="grow">
+ <span class="title">{{ blocker.description|truncate(120) }}</span>
+ <span class="meta">
+                    <span>{{ blocker.kind|replace("_", " ")|title }}</span>
+                    <span>Raised by {{ blocker.raised_by.display_name if blocker.raised_by else "—" }}</span>
+                    <span>{{ blocker.created_at|relative }}</span>
+                    {% if blocker.task %}<span>Task: {{ blocker.task.title|truncate(40) }}</span>{% endif %}
+                  </span>
+ </span>
+ <span class="trail">
+                  {% if blocker.assigned_to %}
+ <span class="tiny dim">{{ blocker.assigned_to.display_name }} helping</span>
+                  {% endif %}
+ <span class="pill pill-{{ blocker.status|lower }}">{{ blocker.status|title }}</span>
+ </span>
+ </div>
+ </li>
+            {% endfor %}
+ </ul>
+        {% endif %}
+
+        {# --- Members needing help --- #}
+        {% if queue.blocked_tasks or queue.missing_checkins %}
+ <div class="panel-head">
+ <h3 style="margin:0;font-size:var(--text-sm);">Members needing help</h3>
+ </div>
+ <div class="panel-body">
+            {% if queue.blocked_tasks %}
+ <p class="field-label">Tasks stuck in Blocked</p>
+ <ul class="tag-list mb-4">
+                {% for task in queue.blocked_tasks %}
+ <li class="tag">
+ <a href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title|truncate(48) }}</a>
+                    · {{ task.assignee.display_name if task.assignee else "Unassigned" }}
+ </li>
+                {% endfor %}
+ </ul>
+            {% endif %}
+
+            {% if queue.missing_checkins %}
+ <p class="field-label">No check-in today</p>
+ <ul class="tag-list">
+                {% for member in queue.missing_checkins %}
+ <li class="tag">
+ <a href="{{ url_for('team.profile', username=member.username) }}">{{ member.display_name }}</a>
+ </li>
+                {% endfor %}
+ </ul>
+ <p class="field-hint mt-2">
+                Check-ins are due on working days. An approved absence removes a member from this list.
+ </p>
+            {% endif %}
+ </div>
+        {% endif %}
+
+        {# --- Overdue milestones --- #}
+        {% if queue.overdue_milestones %}
+ <div class="panel-head">
+ <h3 style="margin:0;font-size:var(--text-sm);">
+            Milestones past their date
+ <span class="count">{{ queue.overdue_milestones|length }}</span>
+ </h3>
+ </div>
+ <ul class="list">
+            {% for milestone in queue.overdue_milestones %}
+ <li>
+ <a class="list-row" href="{{ url_for('projects.detail', project_id=milestone.project_id) }}#milestones">
+ <span class="grow">
+ <span class="title">{{ milestone.title }}</span>
+ <span class="meta">
+                    <span>{{ milestone.project.name }}</span>
+                    <span class="due-overdue">{{ milestone.due_date|localdate("%d %b") }}</span>
+                  </span>
+ </span>
+ <span class="trail">{{ status_pill(milestone.status) }}</span>
+ </a>
+ </li>
+            {% endfor %}
+ </ul>
+        {% endif %}
+
+      {% endif %}
+ </section>
+
+    {# ================= Compliance table ============================= #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Member figures</h2>
+ <span class="count">{{ compliance|length }} member{{ "s" if compliance|length != 1 else "" }}</span>
+ </div>
+ <p class="panel-body" style="padding-bottom:0;">
+ <span class="small muted">
+        These columns are deliberately separate. Task completion, review outcomes,
+        focus sessions and reporting compliance measure different things and are
+        never combined into one score.
+ </span>
+ </p>
+ <div class="table-wrap" style="border:0;border-radius:0;">
+ <table class="data">
+ <caption>Last {{ days }} days. Each figure links to the records behind it.</caption>
+ <thead>
+ <tr>
+ <th scope="col">Member</th>
+ <th scope="col" class="num">Tasks done</th>
+ <th scope="col" class="num">Open</th>
+ <th scope="col" class="num">Overdue</th>
+ <th scope="col" class="num">Awaiting review</th>
+ <th scope="col" class="num">Approved</th>
+ <th scope="col" class="num">Changes</th>
+ <th scope="col" class="num">Focus days</th>
+ <th scope="col" class="num">Check-ins</th>
+ <th scope="col" class="num">Reports</th>
+ </tr>
+ </thead>
+ <tbody>
+          {% for row in compliance %}
+ <tr>
+ <td class="nowrap">
+ <a href="{{ url_for('team.profile', username=row.user.username) }}">{{ row.user.display_name }}</a>
+ <span class="pill no-dot">{{ row.user.role_label }}</span>
+ </td>
+ <td class="num">
+ <a href="{{ url_for('tasks.index', view='team', assignee=row.user.id, status='COMPLETED', include_done='1') }}">{{ row.tasks_completed }}</a>
+ </td>
+ <td class="num">
+ <a href="{{ url_for('tasks.index', view='team', assignee=row.user.id) }}">{{ row.open_tasks }}</a>
+ </td>
+ <td class="num {% if row._overdue %}tone-critical{% endif %}">
+ <a href="{{ url_for('tasks.index', view='team', assignee=row.user.id, due='overdue') }}">{{ row._overdue }}</a>
+ </td>
+ <td class="num">
+ <a href="{{ url_for('tasks.review_queue') }}">{{ row.awaiting_review }}</a>
+ </td>
+ <td class="num">{{ row.approved }}</td>
+ <td class="num {% if row.changes_requested %}tone-attention{% endif %}">{{ row.changes_requested }}</td>
+ <td class="num">
+            {{ row.focus_days }}<span class="dim tiny">/{{ row.working_days }}</span>
+ </td>
+ <td class="num">{{ row.checkins }}<span class="dim tiny"> ({{ row.checkin_rate }}%)</span></td>
+ <td class="num">{{ row.reports }}<span class="dim tiny"> ({{ row.report_rate }}%)</span></td>
+ </tr>
+          {% endfor %}
+ </tbody>
+ </table>
+ </div>
+ </section>
+ </div>
+
+  {# ================= RIGHT: figures, activity, storage ================ #}
+ <aside class="stack-4">
+ <section>
+ <h2 class="visually-hidden">Company figures</h2>
+
+ <div class="stat-strip">
+ <a class="stat" href="{{ url_for('tasks.index', view='team') }}">
+ <span class="label">Open tasks</span>
+ <span class="value numeric">{{ task_metrics.open }}</span>
+ <span class="meta">{{ task_metrics.overdue }} overdue</span>
+ </a>
+ <a class="stat" href="{{ url_for('tasks.index', view='team', due='overdue') }}">
+ <span class="label">Overdue</span>
+ <span class="value numeric {% if task_metrics.overdue %}critical{% endif %}">{{ task_metrics.overdue }}</span>
+ <span class="meta">past deadline</span>
+ </a>
+ <a class="stat" href="{{ url_for('tasks.review_queue') }}">
+ <span class="label">Awaiting review</span>
+ <span class="value numeric {% if review_metrics.awaiting_review %}attention{% endif %}">{{ review_metrics.awaiting_review }}</span>
+ <span class="meta">submissions</span>
+ </a>
+ <a class="stat" href="{{ url_for('tasks.blockers', status='open') }}">
+ <span class="label">Blockers</span>
+ <span class="value numeric {% if queue.open_blockers %}critical{% endif %}">{{ queue.open_blockers|length }}</span>
+ <span class="meta">open now</span>
+ </a>
+ </div>
+
+ <div class="stat-strip mt-4">
+ <a class="stat" href="{{ url_for('tasks.index', view='team', status='COMPLETED', include_done='1') }}">
+ <span class="label">Tasks completed</span>
+ <span class="value numeric positive">{{ task_metrics.completed }}</span>
+ <span class="meta">in this range</span>
+ </a>
+ <a class="stat" href="{{ url_for('tasks.review_queue') }}">
+ <span class="label">Approved</span>
+ <span class="value numeric positive">{{ review_metrics.approved }}</span>
+ <span class="meta">{{ review_metrics.changes_requested }} returned</span>
+ </a>
+ <a class="stat" href="{{ url_for('focus.history') }}">
+ <span class="label">Focus sessions</span>
+ <span class="value numeric">{{ focus_metrics.completed_sessions }}</span>
+ <span class="meta">{{ focus_metrics.total_minutes }} minutes</span>
+ </a>
+ <a class="stat" href="{{ url_for('daily.team_records') }}">
+ <span class="label">Check-ins</span>
+ <span class="value numeric">{{ reporting_metrics.checkins }}</span>
+ <span class="meta">{{ reporting_metrics.reports }} reports</span>
+ </a>
+ </div>
+ </section>
+
+    {# --- Contribution board --- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Contribution</h2>
+ <a class="tiny" href="{{ url_for('xp.leaderboard') }}">Full board</a>
+ </div>
+ <ul class="list">
+        {% for profile, member in leaderboard %}
+ <li>
+ <a class="list-row" href="{{ url_for('team.profile', username=member.username) }}">
+ <span class="avatar avatar-sm {{ member.username }}">{{ member.initials }}</span>
+ <span class="grow">
+ <span class="title">{{ member.display_name }}</span>
+ <span class="meta">
+ <span>Level {{ profile.current_level }} · {{ profile.level_name }}</span>
+ <span>{{ profile.tasks_completed }} accepted</span>
+ </span>
+ </span>
+ <span class="trail numeric small">{{ profile.lifetime_xp }} XP</span>
+ </a>
+ </li>
+        {% endfor %}
+ </ul>
+ <div class="panel-foot">
+        XP reflects verified contribution. It does not confer permissions or
+        authority over colleagues.
+ </div>
+ </section>
+
+    {# --- Recent activity --- #}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Recent activity</h2>
+ <a class="tiny" href="{{ url_for('ceo.activity') }}">Full log</a>
+ </div>
+      {% if activity %}
+ <ul class="timeline" style="padding: var(--space-4);">
+          {% for entry in activity %}
+ <li>
+ <p class="what">{{ entry.action_label }}</p>
+ <p class="detail">
+              {% if entry.user %}{{ entry.user.display_name }} · {% endif %}
+              {{ entry.summary or "" }}
+ </p>
+ <p class="when">{{ entry.created_at|relative }}</p>
+ </li>
+          {% endfor %}
+ </ul>
+      {% else %}
+        {{ empty_state("No activity recorded yet", "Task changes, reviews, account changes and configuration edits are all recorded here.") }}
+      {% endif %}
+ </section>
+
+    {# --- Storage, only when it is meaningful --- #}
+    {% if storage %}
+ <section class="panel">
+ <div class="panel-head">
+ <h2>Storage</h2>
+ <a class="tiny" href="{{ url_for('uploads.storage') }}">Manage files</a>
+ </div>
+ <div class="panel-body">
+ <div class="progress-row">
+ <span>{{ (storage.total_bytes / 1048576)|round(1) }} MB used</span>
+ <span>{{ storage.percent_of_budget }}% of 512 MB</span>
+ </div>
+ <div class="progress {% if storage.percent_of_budget > 80 %}gold{% endif %}">
+ <span style="width: {{ [storage.percent_of_budget, 100]|min }}%"></span>
+ </div>
+ <dl class="facts mt-4">
+ <div class="fact">
+ <dt>Uploads</dt>
+ <dd>{{ (storage.uploads_bytes / 1048576)|round(1) }} MB</dd>
+ </div>
+ <div class="fact">
+ <dt>Database</dt>
+ <dd>{{ (storage.database_bytes / 1048576)|round(1) }} MB</dd>
+ </div>
+ </dl>
+ </div>
+ </section>
+    {% endif %}
+ </aside>
+</div>
+{% endblock %}

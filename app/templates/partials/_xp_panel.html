@@ -1,0 +1,106 @@
+{#
+  Contribution panel.
+
+  Shows level, progress and the most recent awards with the reason for each, so
+  a member can always see exactly why XP was granted. Rendered on the member
+  dashboard, the contribution page and the profile.
+#}
+{% from "partials/_status_pill.html" import xp_amount %}
+
+{% set panel = xp_panel if xp_panel is defined else None %}
+{% set profile = panel.profile if panel else xp_profile %}
+{% set ladder = xp_ladder if xp_ladder is defined else None %}
+
+<section class="panel">
+ <div class="panel-head">
+ <h2>Contribution</h2>
+ <a class="tiny" href="{{ url_for('xp.index') }}">Full detail</a>
+ </div>
+ <div class="panel-body">
+ <div class="level-block">
+ <div class="level-line">
+ <span class="level-name">Level {{ profile.current_level }} · {{ profile.level_name }}</span>
+ <span class="level-xp numeric">{{ profile.lifetime_xp }} XP</span>
+ </div>
+
+      {% if profile.xp_to_next_level is not none %}
+ <div class="progress"><span style="width: {{ profile.progress_percent }}%"></span></div>
+ <div class="progress-row">
+ <span>{{ profile.xp_into_level }} of {{ profile.xp_into_level + profile.xp_to_next_level }} toward the next level</span>
+ <span>{{ profile.xp_to_next_level }} XP to go</span>
+ </div>
+      {% else %}
+ <div class="progress"><span style="width: 100%"></span></div>
+ <div class="progress-row">
+ <span>Highest level reached</span>
+ <span>{{ profile.lifetime_xp }} XP lifetime</span>
+ </div>
+      {% endif %}
+ </div>
+
+    {% if panel %}
+ <dl class="facts mt-6">
+ <div class="fact">
+ <dt>This week</dt>
+ <dd>{{ panel.weekly.xp_earned }} XP from {{ panel.weekly.tasks_approved }} accepted task{{ "s" if panel.weekly.tasks_approved != 1 else "" }}</dd>
+ </div>
+ <div class="fact">
+ <dt>Consistency</dt>
+ <dd>
+          {{ profile.focus_streak }} working day{{ "s" if profile.focus_streak != 1 else "" }} in a row
+          <span class="dim">· best {{ profile.focus_streak_best }}</span>
+ </dd>
+ </div>
+ </dl>
+    {% endif %}
+
+    {% if panel and panel.challenges %}
+ <div class="mt-6">
+ <p class="field-label">This week's challenges</p>
+ <ul class="stack-3" style="list-style:none;padding:0;margin:0;">
+        {% for row in panel.challenges %}
+ <li>
+ <div class="progress-row">
+ <span>{{ row.challenge.title }}</span>
+ <span>{{ row.progress.current_value }} / {{ row.challenge.target_value }}</span>
+ </div>
+ <div class="progress thin {% if row.is_complete %}gold{% endif %}">
+ <span style="width: {{ row.percent }}%"></span>
+ </div>
+ </li>
+        {% endfor %}
+ </ul>
+ </div>
+    {% endif %}
+
+    {% if panel and panel.recent_awards %}
+ <div class="mt-6">
+ <p class="field-label">Recent awards</p>
+ <ul class="stack-3" style="list-style:none;padding:0;margin:0;">
+        {% for transaction in panel.recent_awards %}
+ <li class="ledger-row">
+ <span class="reason">
+ <span class="small">{{ transaction.reason_label }}</span>
+ <span class="tiny dim" style="display:block;">{{ transaction.created_at|relative }}</span>
+ </span>
+ <span class="amount">{{ xp_amount(transaction.amount) }}</span>
+ </li>
+        {% endfor %}
+ </ul>
+ </div>
+    {% endif %}
+
+    {% if panel and panel.achievements %}
+ <div class="mt-6">
+ <p class="field-label">Recent achievements</p>
+ <ul class="tag-list">
+        {% for award in panel.achievements %}
+ <li class="tag" title="{{ award.achievement.description if award.achievement else '' }}">
+          {{ award.display_name }}
+ </li>
+        {% endfor %}
+ </ul>
+ </div>
+    {% endif %}
+ </div>
+</section>

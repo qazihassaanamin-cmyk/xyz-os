@@ -1,0 +1,111 @@
+{#
+  Evidence gallery with a keyboard-accessible lightbox.
+
+  Thumbnails are server-generated. Full images load only when the lightbox opens,
+  so a task with many screenshots does not cost the free-tier bandwidth budget
+  on every page view.
+#}
+{% macro evidence_gallery(attachments, empty_guidance="No evidence has been attached yet.") %}
+  {% if attachments %}
+    {% set images = attachments|selectattr("is_image")|list %}
+    {% set documents = attachments|rejectattr("is_image")|list %}
+
+    {% if images %}
+ <ul class="gallery">
+        {% for attachment in images %}
+ <li class="gallery-item">
+ <button type="button" class="gallery-thumb"
+                    data-lightbox-trigger
+                    data-full-url="{{ url_for('uploads.preview', attachment_id=attachment.id) }}"
+                    data-caption="{{ attachment.caption or attachment.original_name }}"
+                    aria-label="Open {{ attachment.original_name }} in a larger view">
+ <img src="{{ url_for('uploads.thumbnail', attachment_id=attachment.id) }}"
+                 alt="{{ attachment.caption or attachment.original_name }}"
+                 loading="lazy" width="400" height="300">
+ </button>
+ <p class="gallery-caption">
+            {{ attachment.caption or attachment.original_name }}
+            <span class="dim">· {{ attachment.size_label }}</span>
+ </p>
+ <div class="row row-tight mt-2">
+ <a class="tiny" href="{{ url_for('uploads.download', attachment_id=attachment.id) }}">Download</a>
+            {% if attachment.uploaded_by %}
+ <span class="tiny dim">{{ attachment.uploaded_by.display_name }}</span>
+            {% endif %}
+            {% if attachment.uploaded_by_id == current_user.id or current_user.is_ceo %}
+ <form method="post" action="{{ url_for('uploads.delete', attachment_id=attachment.id) }}"
+                    data-confirm="Remove this file? It will be hidden from the record.">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="tiny" style="background:none;border:0;padding:0;color:var(--text-muted);cursor:pointer;">Remove</button>
+ </form>
+            {% endif %}
+ </div>
+ </li>
+        {% endfor %}
+ </ul>
+    {% endif %}
+
+    {% if documents %}
+ <ul class="stack-2" style="list-style:none;padding:0;margin:{% if images %}16px 0 0{% else %}0{% endif %};">
+        {% for attachment in documents %}
+ <li>
+ <div class="file-chip">
+ <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+ <path d="M3 2h5l3 3v7H3z" stroke-linejoin="round"/><path d="M8 2v3h3" stroke-linejoin="round"/>
+ </svg>
+ <a class="name grow" href="{{ url_for('uploads.download', attachment_id=attachment.id) }}">{{ attachment.original_name }}</a>
+ <span class="size">{{ attachment.size_label }}</span>
+              {% if attachment.uploaded_by_id == current_user.id or current_user.is_ceo %}
+ <form method="post" action="{{ url_for('uploads.delete', attachment_id=attachment.id) }}"
+                        data-confirm="Remove this file?">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+ <button type="submit" class="btn btn-sm btn-ghost">Remove</button>
+ </form>
+              {% endif %}
+ </div>
+ </li>
+        {% endfor %}
+ </ul>
+    {% endif %}
+  {% else %}
+ <p class="muted small">{{ empty_guidance }}</p>
+  {% endif %}
+{% endmacro %}
+
+{#
+  The lightbox container. Rendered once per page that has a gallery.
+#}
+{% macro lightbox() %}
+<div class="lightbox" data-lightbox hidden role="dialog" aria-modal="true" aria-label="Evidence viewer">
+ <img data-lightbox-image src="" alt="">
+ <div class="lightbox-bar">
+ <button type="button" class="btn btn-sm" data-lightbox-prev aria-label="Previous image">Previous</button>
+ <span data-lightbox-counter class="numeric"></span>
+ <span data-lightbox-caption class="dim"></span>
+ <button type="button" class="btn btn-sm" data-lightbox-next aria-label="Next image">Next</button>
+ <button type="button" class="btn btn-sm" data-lightbox-close>Close</button>
+ </div>
+ <p class="tiny dim mt-2">Arrow keys move between images. Escape closes.</p>
+</div>
+{% endmacro %}
+
+{#
+  A single inline thumbnail, for the review queue and compact lists.
+#}
+{% macro file_thumb(attachment) %}
+  {% if attachment.is_image %}
+ <button type="button" class="gallery-thumb" style="width:72px;aspect-ratio:1;"
+            data-lightbox-trigger
+            data-full-url="{{ url_for('uploads.preview', attachment_id=attachment.id) }}"
+            data-caption="{{ attachment.caption or attachment.original_name }}"
+            aria-label="Open {{ attachment.original_name }}">
+ <img src="{{ url_for('uploads.thumbnail', attachment_id=attachment.id) }}"
+         alt="{{ attachment.caption or attachment.original_name }}" loading="lazy">
+ </button>
+  {% else %}
+ <a class="file-chip" href="{{ url_for('uploads.download', attachment_id=attachment.id) }}">
+ <span class="name">{{ attachment.original_name }}</span>
+ <span class="size">{{ attachment.size_label }}</span>
+ </a>
+  {% endif %}
+{% endmacro %}

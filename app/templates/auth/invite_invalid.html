@@ -1,0 +1,21 @@
+{% extends "layout/auth.html" %}
+
+{% block title %}Invitation not valid{% endblock %}
+
+{% block content %}
+<h1>That invitation is not valid</h1>
+<p class="lede">
+  Invitation links are single-use and expire. This one has already been used,
+  has expired, or was replaced.
+</p>
+
+<div class="btn-row mt-6">
+ <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Back to sign in</a>
+</div>
+
+<div class="auth-foot">
+ <p class="mb-0">
+    Ask the CEO to issue a new invitation if you still need access.
+ </p>
+</div>
+{% endblock %}

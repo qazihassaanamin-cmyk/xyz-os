@@ -1,0 +1,21 @@
+{# Flash messages. Rendered once, in the shell, so every page gets them. #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack">
+      {% for category, message in messages %}
+        {% set tone = "info" %}
+        {% if category == "error" %}{% set tone = "error" %}{% endif %}
+        {% if category == "success" %}{% set tone = "success" %}{% endif %}
+        {% if category == "warning" %}{% set tone = "warning" %}{% endif %}
+        <div class="alert alert-{{ tone }}" role="{{ 'alert' if tone in ['error', 'warning'] else 'status' }}">
+          <div class="alert-body">{{ message }}</div>
+          <button type="button" class="icon-btn" data-dismiss aria-label="Dismiss this message">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M3 3l8 8M11 3l-8 8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}

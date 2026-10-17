@@ -1,0 +1,40 @@
+{#
+  Authentication layout.
+
+  Standalone: no sidebar, no application shell. The wordmark sits top-left and
+  the form is a single centred column on a bordered surface, so the first screen
+  a visitor sees is unmistakably a sign-in page for a private platform.
+#}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="csrf-token" content="{{ csrf_token() }}">
+ <meta name="robots" content="noindex, nofollow, noarchive">
+ <title>{% block title %}{{ page_title or "Sign in" }}{% endblock %} · {{ company_name }}</title>
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+</head>
+<body>
+<div class="auth-shell">
+ <a class="auth-brand" href="{{ url_for('auth.login') }}">
+    <span class="wordmark">{{ company_name }}</span>
+    <span class="tagline">Internal operations platform</span>
+ </a>
+
+ <main class="auth-main" id="main-content">
+    <div class="auth-card">
+      {% include "partials/_flash.html" %}
+      {% block content %}{% endblock %}
+    </div>
+ </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/ui.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

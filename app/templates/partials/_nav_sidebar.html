@@ -1,0 +1,176 @@
+{#
+  Sidebar navigation.
+
+  Management items are rendered only for the CEO, but that is a presentation
+  detail: every management route is separately gated by @ceo_required. Hiding a
+  link is never the permission check.
+#}
+{% set nav = nav_active %}
+
+<aside class="sidebar" id="app-sidebar" data-sidebar data-open="false">
+ <a class="sidebar-brand" href="{{ url_for('dashboard.index') }}">
+    <span class="wordmark">{{ company_name }}</span>
+    <span class="tagline">Internal operations</span>
+ </a>
+
+ <nav class="nav" aria-label="Main navigation">
+    <div class="nav-group">
+      <p class="nav-group-label">Workspace</p>
+      <a href="{{ url_for('dashboard.index') }}" {% if nav == 'dashboard.index' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/>
+          <rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>
+        </svg>
+        My dashboard
+      </a>
+      <a href="{{ url_for('tasks.index') }}" {% if nav and nav.startswith('tasks.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 4.5l1.5 1.5L7 3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 11l1.5 1.5L7 10" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 5h4M9 11.5h4" stroke-linecap="round"/>
+        </svg>
+        My tasks
+        {% if task_open_count %}<span class="nav-count">{{ task_open_count }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.index') }}" {% if nav and nav.startswith('projects.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M2 5.5A1.5 1.5 0 013.5 4h2l1 1.5h6A1.5 1.5 0 0114 7v5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12V5.5z"/>
+        </svg>
+        Projects
+      </a>
+      <a href="{{ url_for('focus.index') }}" {% if nav == 'focus.index' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5" stroke-linecap="round"/>
+        </svg>
+        Focus timer
+        {% if focus_running %}<span class="nav-count">live</span>{% endif %}
+      </a>
+      <a href="{{ url_for('daily.index') }}" {% if nav and nav.startswith('daily.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/>
+          <path d="M5.5 2v3M10.5 2v3M2.5 7h11" stroke-linecap="round"/>
+        </svg>
+        Daily check-in
+        {% if not checkin_done %}<span class="nav-count alert">due</span>{% endif %}
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <p class="nav-group-label">Collaboration</p>
+      <a href="{{ url_for('tasks.review_queue') }}" {% if nav == 'tasks.review_queue' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 3.5h10v7H8l-3 2.5v-2.5H3z" stroke-linejoin="round"/>
+        </svg>
+        Work submissions
+        {% if review_count %}<span class="nav-count">{{ review_count }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('suggestions.index') }}" {% if nav and nav.startswith('suggestions.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M6 13h4M8 2.5a3.5 3.5 0 00-2 6.3V11h4V8.8A3.5 3.5 0 008 2.5z" stroke-linejoin="round"/>
+        </svg>
+        Ideas &amp; suggestions
+      </a>
+      <a href="{{ url_for('lounge.index') }}" {% if nav and nav.startswith('lounge.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M2.5 4.5h11v6h-6l-3 3v-3h-2z" stroke-linejoin="round"/>
+        </svg>
+        The Lounge
+      </a>
+      <a href="{{ url_for('announcements.index') }}" {% if nav and nav.startswith('announcements.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 6.5l7-3v9l-7-3z" stroke-linejoin="round"/><path d="M3 6.5v3M12 6v4" stroke-linecap="round"/>
+        </svg>
+        Announcements
+      </a>
+      <a href="{{ url_for('knowledge.index') }}" {% if nav and nav.startswith('knowledge.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 3h4.5A1.5 1.5 0 019 4.5V13H4.5A1.5 1.5 0 013 11.5V3z"/>
+          <path d="M13 3H9v10h2.5A1.5 1.5 0 0013 11.5V3z"/>
+        </svg>
+        Knowledge
+      </a>
+      <a href="{{ url_for('xp.leaderboard') }}" {% if nav and nav.startswith('xp.') %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M4 12V7M8 12V4M12 12V9" stroke-linecap="round"/><path d="M2.5 13.5h11" stroke-linecap="round"/>
+        </svg>
+        Contribution
+      </a>
+    </div>
+
+    {% if current_user.is_ceo %}
+    <div class="nav-group">
+      <p class="nav-group-label">Management</p>
+      <a href="{{ url_for('dashboard.ceo') }}" {% if nav == 'dashboard.ceo' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M2 12l3.5-4 3 2.5L14 5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 5h3v3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Command centre
+        {% if attention_count %}<span class="nav-count alert">{{ attention_count }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('ceo.members') }}" {% if nav == 'ceo.members' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <circle cx="6" cy="6" r="2.5"/><path d="M2 13c0-2 1.8-3 4-3s4 1 4 3" stroke-linecap="round"/>
+          <path d="M11 6.5a2 2 0 100-4M14 12.5c0-1.5-1-2.4-2.5-2.6" stroke-linecap="round"/>
+        </svg>
+        Team members
+      </a>
+      <a href="{{ url_for('tasks.review_queue') }}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 8.5l3 3 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Task reviews
+        {% if review_count %}<span class="nav-count">{{ review_count }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('suggestions.reviews') }}" {% if nav == 'suggestions.reviews' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M3 3.5h10v7H8l-3 2.5v-2.5H3z" stroke-linejoin="round"/>
+        </svg>
+        Suggestion reviews
+      </a>
+      <a href="{{ url_for('ceo.reports') }}" {% if nav == 'ceo.reports' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M5.5 10V7M8 10V5.5M10.5 10V8.5" stroke-linecap="round"/>
+        </svg>
+        Reports
+      </a>
+      <a href="{{ url_for('ceo.activity') }}" {% if nav == 'ceo.activity' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M2 8h3l2-4 2 8 1.5-4h2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Activity logs
+      </a>
+      <a href="{{ url_for('xp.admin') }}" {% if nav == 'xp.admin' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2M3.8 3.8l1.4 1.4M10.8 10.8l1.4 1.4M12.2 3.8l-1.4 1.4M5.2 10.8l-1.4 1.4" stroke-linecap="round"/>
+        </svg>
+        Rewards config
+      </a>
+      <a href="{{ url_for('ceo.settings') }}" {% if nav == 'ceo.settings' %}aria-current="page"{% endif %}>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11" stroke-linecap="round"/>
+          <circle cx="5" cy="9.5" r="1"/>
+        </svg>
+        Settings
+      </a>
+    </div>
+    {% elif leading_projects %}
+    <div class="nav-group">
+      <p class="nav-group-label">Project lead</p>
+      {% for project in leading_projects %}
+      <a href="{{ url_for('projects.detail', project_id=project.id) }}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M2 5.5A1.5 1.5 0 013.5 4h2l1 1.5h6A1.5 1.5 0 0114 7v5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12V5.5z"/>
+        </svg>
+        {{ project.name }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+ </nav>
+
+ <div class="sidebar-foot">
+    <p class="mb-2">{{ company_name }} · internal platform</p>
+    <p class="dim">Sessions expire after 8 hours of inactivity.</p>
+ </div>
+</aside>
