@@ -29,7 +29,7 @@ def main() -> None:
         from app.models.user import User
 
         for identifier, password in CREDENTIALS:
-            user = User.query.filter(db.func.lower(User.identifier) == identifier.lower()).first()
+            user = User.query.filter(db.func.lower(User.email) == identifier.lower()).first()
             if user is None:
                 print(f"MISSING: {identifier}")
                 continue
