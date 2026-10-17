@@ -1,0 +1,85 @@
+"""Shared model primitives: timestamps, soft delete, enum helpers."""
+
+from __future__ import annotations
+
+import enum
+from datetime import datetime, timezone
+
+from sqlalchemy import DateTime, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.extensions import db
+
+
+def utcnow() -> datetime:
+    """Timezone-aware UTC now. Every stored timestamp goes through this."""
+    return datetime.now(timezone.utc)
+
+
+class TimestampMixin:
+    """Adds ``created_at`` / ``updated_at`` maintained in UTC.
+
+    ``onupdate`` is applied at the Python level so SQLite and PostgreSQL behave
+    identically and so ORM-side change tracking stays deterministic.
+    """
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=func.now(),
+    )
+
+
+class SoftDeleteMixin:
+    """Deactivate instead of destroying people and work records."""
+
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_by_id: Mapped[int | None] = mapped_column(db.ForeignKey("users.id"), nullable=True)
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
+
+
+class StrEnum(str, enum.Enum):
+    """String enum whose ``.value`` is stored in the database."""
+
+    def __str__(self) -> str:  # pragma: no cover - display helper
+        return str(self.value)
+
+    @classmethod
+    def values(cls) -> list[str]:
+        return [member.value for member in cls]
+
+    @classmethod
+    def coerce(cls, value):
+        """Return the enum member for ``value`` or ``None`` when invalid."""
+        if isinstance(value, cls):
+            return value
+        if value is None:
+            return None
+        try:
+            return cls(str(value))
+        except ValueError:
+            return None
+
+
+def enum_column(enum_cls, **kwargs):
+    """A portable enum column.
+
+    Native ``ENUM`` types behave differently on SQLite and PostgreSQL; storing
+    the string value with a validation hook keeps migrations simple and both
+    backends honest. Callers pass ``default=`` as the enum member.
+    """
+    return db.Column(
+        db.String(kwargs.pop("length", 32)),
+        nullable=kwargs.pop("nullable", False),
+        default=kwargs.pop("default", None),
+        index=kwargs.pop("index", False),
+        **kwargs,
+    )
