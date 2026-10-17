@@ -167,7 +167,6 @@ class Task(TimestampMixin, db.Model):
     __table_args__ = (
         Index("ix_tasks_assignee_status", "assignee_id", "status"),
         Index("ix_tasks_project_status", "project_id", "status"),
-        Index("ix_tasks_due_date", "due_date"),
         Index("ix_tasks_status_due", "status", "due_date"),
     )
 

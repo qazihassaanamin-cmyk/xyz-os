@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from flask_login import UserMixin
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
@@ -28,6 +28,10 @@ class User(TimestampMixin, UserMixin, db.Model):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    # Official founder role and title, e.g. "Caretaker CEO and Technical Lead".
+    # This is a record of the title the company uses; it is never presented as
+    # proof of a formal statutory appointment.
+    title: Mapped[str | None] = mapped_column(String(160), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     username: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -39,6 +43,9 @@ class User(TimestampMixin, UserMixin, db.Model):
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Asia/Karachi")
+    # Free-text professional biography and skills, editable by the member.
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skills: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Set when the CEO deactivates an account; sessions are rejected after this.
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     must_change_password: Mapped[bool] = mapped_column(
@@ -82,6 +89,15 @@ class User(TimestampMixin, UserMixin, db.Model):
     @property
     def role_label(self) -> str:
         return "CEO" if self.is_ceo else "Member"
+
+    @property
+    def identifier_label(self) -> str:
+        """The internal login identifier shown on profile pages."""
+        return self.email or self.username
+
+    @property
+    def official_title(self) -> str:
+        return self.title or self.role_label
 
     @property
     def initials(self) -> str:

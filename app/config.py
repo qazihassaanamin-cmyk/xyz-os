@@ -39,12 +39,12 @@ class BaseConfig:
 
     # --- Core -----------------------------------------------------------
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-insecure-secret-key-change-me")
-    COMPANY_NAME = os.environ.get("COMPANY_NAME", "XYZ Ltd.")
+    COMPANY_NAME = os.environ.get("COMPANY_NAME", "Tavryc")
     COMPANY_TZ = os.environ.get("COMPANY_TZ", "Asia/Karachi")
 
     # --- Database -------------------------------------------------------
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "instance", "xyz_os_dev.sqlite")
+        "DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "instance", "tavryc.sqlite")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -55,7 +55,7 @@ class BaseConfig:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = _bool("COOKIE_SECURE", False)
-    SESSION_COOKIE_NAME = "xyzos_session"
+    SESSION_COOKIE_NAME = "tavryc_session"
     PERMANENT_SESSION_LIFETIME = timedelta(hours=_int("SESSION_LIFETIME_HOURS", 8))
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
@@ -88,7 +88,7 @@ class BaseConfig:
     SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
     SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
     SMTP_USE_TLS = _bool("SMTP_USE_TLS", True)
-    MAIL_FROM = os.environ.get("MAIL_FROM", "no-reply@xyz.example")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "no-reply@tavryc.com")
     ALLOW_INSECURE_DEV_LINKS = _bool("ALLOW_INSECURE_DEV_LINKS", True)
 
     ANON_VOTE_SALT = os.environ.get("ANON_VOTE_SALT", "dev-anon-salt-change-me")
@@ -104,9 +104,12 @@ class BaseConfig:
     DEFAULT_WORKWEEK = "1,2,3,4,5"       # ISO weekday numbers, Monday = 1
 
     # --- Deployment -----------------------------------------------------
-    PREFERRED_URL_SCHEME = "https" if FORCE_HTTPS else "http"
+    PREFERRED_URL_SCHEME = "https" if _bool("FORCE_HTTPS", False) else "http"
+    # PythonAnywhere free tier: 100 CPU-seconds/day and 512 MiB of disk. Keep
+    # expensive work off the request path and keep uploads small.
+    PYTHONANYWHERE_FREE_TIER = _bool("PYTHONANYWHERE_FREE_TIER", False)
 
-    # --- X-OS gamification toggles (rule values live in the database) ----
+    # --- Gamification toggles (rule values live in the database) ---------
     GAMIFICATION_ENABLED = _bool("GAMIFICATION_ENABLED", True)
 
     JSON_SORT_KEYS = False
@@ -121,12 +124,9 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     TEMPLATES_AUTO_RELOAD = True
     SQLALCHEMY_ECHO = False
+    # Development or single-server deployment: SQLite, no HTTPS terminator.
+    # Suitable for PythonAnywhere's free tier.
     PREFERRED_URL_SCHEME = "http"
-
-    # Dev runs on http://localhost so cookies cannot be Secure or nothing works.
-    SESSION_COOKIE_SECURE = False
-    REMEMBER_COOKIE_SECURE = False
-    FORCE_HTTPS = False
 
 
 class TestingConfig(BaseConfig):
@@ -148,7 +148,7 @@ class ProductionConfig(BaseConfig):
     SESSION_COOKIE_SECURE = _bool("COOKIE_SECURE", True)
     REMEMBER_COOKIE_SECURE = _bool("COOKIE_SECURE", True)
     PREFERRED_URL_SCHEME = "https"
-    SESSION_COOKIE_NAME = "__Host-xyzos_session" if FORCE_HTTPS else "xyzos_session"
+    SESSION_COOKIE_NAME = "__Host-tavryc_session" if _bool("FORCE_HTTPS", False) else "tavryc_session"
 
     @classmethod
     def validate(cls) -> None:
