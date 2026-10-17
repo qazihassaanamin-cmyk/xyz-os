@@ -120,7 +120,78 @@ def create_app(config_name: str | None = None) -> Flask:
             raise
 
     app.logger.info("%s started in %s mode", app.config.get("COMPANY_NAME", "Tavryc"), config_name)
+
+    # A fresh cloud deploy has an empty database. Migrate and seed it once, so
+    # the app is usable immediately after ``gunicorn wsgi:application``.
+    if config_name == "production" and os.environ.get("AUTO_MIGRATE", "1") != "0":
+        _bootstrap_database(app)
+
     return app
+
+
+def _bootstrap_database(app: Flask) -> None:
+    """Run migrations and seed founders on a fresh production database.
+
+    Wrapped in try/except so a partial failure never takes the whole site
+    down — the operator sees a clear error instead of a 500 on every page.
+    """
+    from alembic.config import Config
+    from alembic import command
+
+    try:
+        with app.app_context():
+            from app.extensions import db
+
+            # Create every table the models declare, then stamp the latest
+            # migration so ``flask db upgrade`` afterwards is a no-op.
+            db.create_all()
+            try:
+                alembic_cfg = Config(os.path.join(app.root_path, os.pardir, "alembic.ini"))
+                alembic_cfg.set_main_option("sqlalchemy.url", app.config["SQLALCHEMY_DATABASE_URI"])
+                command.stamp(alembic_cfg, "head")
+            except Exception:
+                app.logger.exception("Could not stamp migrations; tables already exist")
+
+            # Seed founder accounts with their simple passwords on first boot.
+            try:
+                _seed_founders()
+            except Exception:
+                app.logger.exception("Could not seed founder accounts")
+    except Exception:
+        app.logger.exception("Database bootstrap failed")
+
+
+def _seed_founders() -> None:
+    """Create the four founder accounts if they do not exist yet."""
+    from app.extensions import db
+    from app.models.user import User
+    from app.founders import FOUNDERS
+
+    from app.config import BASE_DIR
+    seeded = os.path.join(BASE_DIR, "instance", ".founders_seeded")
+    if os.path.exists(seeded):
+        return
+
+    for spec in FOUNDERS:
+        existing = User.query.filter_by(identifier=spec["identifier"]).first()
+        if existing:
+            continue
+        user = User(
+            identifier=spec["identifier"],
+            username=spec["username"],
+            full_name=spec["full_name"],
+            role=spec["role"],
+            is_active_flag=True,
+            is_active=True,
+            must_change_password=False,
+        )
+        user.set_password(spec.get("password") or spec["username"])
+        db.session.add(user)
+
+    db.session.commit()
+    os.makedirs(os.path.dirname(seeded), exist_ok=True)
+    with open(seeded, "w") as fh:
+        fh.write("1")
 
 
 def _apply_stored_settings(app: Flask) -> None:
